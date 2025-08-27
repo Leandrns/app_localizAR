@@ -1,34 +1,58 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import HomeScreen from './components/HomeScreen'
+import AdminScreen from './components/AdminScreen'
+import UserScreen from './components/UserScreen'
+import { useLocalStorage } from './hooks/useLocalStorage'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [currentMode, setCurrentMode] = useState('home')
+  const [calibrado, setCalirado] = useState(false)
+  const [pontoReferencia, setPontoReferencia] = useState(null)
+  const [pontos, setPontos] = useLocalStorage('pontos', [])
+
+  const resetSystem = () => {
+    setCalirado(false)
+    setPontoReferencia(null)
+    setCurrentMode('home')
+  }
+
+  const updatePontos = (novosPontos) => {
+    setPontos(novosPontos)
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <div className="app">
+      {currentMode === 'home' && (
+        <HomeScreen 
+          pontos={pontos}
+          onModeChange={setCurrentMode}
+        />
+      )}
+      
+      {currentMode === 'admin' && (
+        <AdminScreen 
+          calibrado={calibrado}
+          setCalirado={setCalirado}
+          pontoReferencia={pontoReferencia}
+          setPontoReferencia={setPontoReferencia}
+          pontos={pontos}
+          updatePontos={updatePontos}
+          onGoHome={resetSystem}
+        />
+      )}
+      
+      {currentMode === 'user' && (
+        <UserScreen 
+          calibrado={calibrado}
+          setCalirado={setCalirado}
+          pontoReferencia={pontoReferencia}
+          setPontoReferencia={setPontoReferencia}
+          pontos={pontos}
+          onGoHome={resetSystem}
+        />
+      )}
+    </div>
   )
 }
 
