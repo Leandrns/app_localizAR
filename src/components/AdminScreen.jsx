@@ -54,11 +54,7 @@ function AdminScreen({
 	const handleCreatePoint = (posicaoRelativa) => {
 		const novoPonto = {
 			id: generateId(),
-			posicaoRelativa: {
-				x: posicaoRelativa.x,
-				y: posicaoRelativa.y,
-				z: posicaoRelativa.z,
-			},
+			posicaoRelativa: posicaoRelativa,
 			qrReferencia: pontoReferencia.qrCode,
 			timestamp: Date.now(),
 			tipo: "cubo",
@@ -67,7 +63,7 @@ function AdminScreen({
 
 		setPontos((pontosAntigos) => {
 			const novosPontos = [...pontosAntigos, novoPonto];
-			updatePontos(novosPontos); // <- aqui você garante que vai o array correto
+			updatePontos(novosPontos);
 			return novosPontos;
 		});
 		setPontosCreated((prev) => prev + 1);
@@ -82,7 +78,7 @@ function AdminScreen({
 	};
 
 	const generateId = () => {
-		return Date.now().toString(36) + Math.random().toString(36).substr(2);
+		return Date.now().toString(36) + Math.random().toString(36);
 	};
 
 	if (showQRScanner) {
