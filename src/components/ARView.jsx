@@ -2,6 +2,12 @@ import { useRef, useEffect } from "react";
 import * as THREE from "three";
 import { ARButton } from "three/examples/jsm/webxr/ARButton.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+	"https://sgpthwvonmqnlfuxupul.supabase.co",
+	"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNncHRod3Zvbm1xbmxmdXh1cHVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4NDU0NTgsImV4cCI6MjA3MjQyMTQ1OH0.t0zz2ZJOFhWU6LsSdWZLXEgnk7dEB2x_gsCjNVPYZ3Y"
+);
 
 function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	const containerRef = useRef(null);
@@ -16,6 +22,8 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	const loaderRef = useRef(new GLTFLoader());
 
 	useEffect(() => {
+		carregarPontosSalvos();
+
 		if (calibrado && containerRef.current) {
 			initAR();
 		}
@@ -202,20 +210,21 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 			const { data, error } = await supabase
 				.from("pontos")
 				.select("*")
-				.eq("qrReferencia", pontoReferencia.qrCode);
+				.eq("qr_referencia", pontoReferencia.qrCode);
 
 			if (error) {
 				console.error("Erro ao carregar pontos do Supabase:", error.message);
 				return;
 			}
+			console.log("Pontos buscados");
 
 			console.log(`Carregando ${data.length} pontos do banco para modo ${mode}...`);
 
 			data.forEach((ponto, index) => {
 				const posicaoAbsoluta = new THREE.Vector3(
-					ponto.posicaoRelativa.x,
-					ponto.posicaoRelativa.y,
-					ponto.posicaoRelativa.z
+					ponto.pos_x,
+					ponto.pos_y,
+					ponto.pos_z
 				);
 
 				if (pontoReferencia.arPosition) {
