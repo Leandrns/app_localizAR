@@ -61,11 +61,7 @@ function AdminScreen({
 			criadoPor: "admin",
 		};
 
-		setPontos((pontosAntigos) => {
-			const novosPontos = [...pontosAntigos, novoPonto];
-			updatePontos(novosPontos);
-			return novosPontos;
-		});
+		updatePontos(novoPonto);
 		setPontosCreated((prev) => prev + 1);
 	};
 

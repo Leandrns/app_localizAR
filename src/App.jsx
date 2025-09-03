@@ -17,8 +17,8 @@ function App() {
 		setCurrentMode("home");
 	};
 
-	const updatePontos = (novosPontos) => {
-		setPontos(novosPontos);
+	const updatePontos = (novoPonto) => {
+		setPontos((prev) => [...prev, novoPonto]);
 	};
 
 	return (
