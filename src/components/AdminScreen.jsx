@@ -8,6 +8,7 @@ function AdminScreen({
 	pontoReferencia,
 	setPontoReferencia,
 	pontos,
+    setPontos,
 	updatePontos,
 	onGoHome,
 }) {
@@ -64,8 +65,11 @@ function AdminScreen({
 			criadoPor: "admin",
 		};
 
-		const novosPontos = [...pontos, novoPonto];
-		updatePontos(novosPontos);
+		setPontos((pontosAntigos) => {
+			const novosPontos = [...pontosAntigos, novoPonto];
+			updatePontos(novosPontos); // <- aqui você garante que vai o array correto
+			return novosPontos;
+		});
 		setPontosCreated((prev) => prev + 1);
 	};
 
