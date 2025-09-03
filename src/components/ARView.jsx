@@ -16,10 +16,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	const loaderRef = useRef(new GLTFLoader());
 
 	useEffect(() => {
-		const posicao = {x:0,y:0,z:0}
-
-		onCreatePoint(posicao)
-
 		if (calibrado && containerRef.current) {
 			initAR();
 		}
