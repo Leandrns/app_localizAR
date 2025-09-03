@@ -16,20 +16,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	const loaderRef = useRef(new GLTFLoader());
 
 	useEffect(() => {
-		// Teste 1: Chamadas síncronas (problema atual)
-        setTimeout(() => {
-            const posTeste = {x:0,y:0,z:0};
-            const posTeste2 = {x:2,y:2,z:2};
-            const posTeste3 = {x:3,y:3,z:3};
-            onCreatePoint(posTeste);
-            onCreatePoint(posTeste2);
-            onCreatePoint(posTeste3);
-        }, 1000);
-        
-        // Teste 2: Chamadas assíncronas (para comparar)
-        setTimeout(() => onCreatePoint({x:10,y:0,z:0}), 2000);
-        setTimeout(() => onCreatePoint({x:20,y:0,z:0}), 3000);
-        setTimeout(() => onCreatePoint({x:30,y:0,z:0}), 4000);
 		if (calibrado && containerRef.current) {
 			initAR();
 		}
