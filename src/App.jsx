@@ -18,7 +18,11 @@ function App() {
 	};
 
 	const updatePontos = (novoPonto) => {
-		setPontos((prev) => [...prev, novoPonto]);
+        if (Array.isArray(novoPonto)) {
+            setPontos(novoPonto)
+        } else {
+            setPontos((prev) => [...prev, novoPonto]);
+        }
 	};
 
 	return (
