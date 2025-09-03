@@ -193,30 +193,40 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		}
 	};
 
-	const carregarPontosSalvos = () => {
+	// Função para buscar pontos no Supabase
+	const carregarPontosSalvos = async () => {
 		if (!calibrado || !pontoReferencia) return;
 
-		const pontosDoEvento = pontos.filter(
-			(ponto) => ponto.qrReferencia === pontoReferencia.qrCode
-		);
+		try {
+			// Buscar pontos do Supabase
+			const { data, error } = await supabase
+				.from("pontos")
+				.select("*")
+				.eq("qrReferencia", pontoReferencia.qrCode);
 
-		console.log(
-			`Carregando ${pontosDoEvento.length} pontos salvos para modo ${mode}...`
-		);
-
-		pontosDoEvento.forEach((ponto, index) => {
-			const posicaoAbsoluta = new THREE.Vector3(
-				ponto.posicaoRelativa.x,
-				ponto.posicaoRelativa.y,
-				ponto.posicaoRelativa.z
-			);
-
-			if (pontoReferencia.arPosition) {
-				posicaoAbsoluta.add(pontoReferencia.arPosition);
+			if (error) {
+				console.error("Erro ao carregar pontos do Supabase:", error.message);
+				return;
 			}
 
-			criarModeloCarregado(posicaoAbsoluta, ponto, index);
-		});
+			console.log(`Carregando ${data.length} pontos do banco para modo ${mode}...`);
+
+			data.forEach((ponto, index) => {
+				const posicaoAbsoluta = new THREE.Vector3(
+					ponto.posicaoRelativa.x,
+					ponto.posicaoRelativa.y,
+					ponto.posicaoRelativa.z
+				);
+
+				if (pontoReferencia.arPosition) {
+					posicaoAbsoluta.add(pontoReferencia.arPosition);
+				}
+
+				criarModeloCarregado(posicaoAbsoluta, ponto, index);
+			});
+		} catch (err) {
+			console.error("Erro inesperado ao buscar pontos:", err);
+		}
 	};
 
 	const criarModeloCarregado = (posicao, dadosPonto, index) => {
