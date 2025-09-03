@@ -8,7 +8,6 @@ function AdminScreen({
 	pontoReferencia,
 	setPontoReferencia,
 	pontos,
-    setPontos,
 	updatePontos,
 	onGoHome,
 }) {
