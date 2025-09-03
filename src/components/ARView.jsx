@@ -216,7 +216,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 				console.error("Erro ao carregar pontos do Supabase:", error.message);
 				return;
 			}
-			console.log("Pontos buscados");
 
 			console.log(`Carregando ${data.length} pontos do banco para modo ${mode}...`);
 
@@ -228,7 +227,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 				);
 
 				if (pontoReferencia.arPosition) {
-					posicaoAbsoluta.add(pontoReferencia.arPosition);
+					posicaoAbsoluta.add(pontoReferencia.arPosition.clone());
 				}
 
 				criarModeloCarregado(posicaoAbsoluta, ponto, index);
