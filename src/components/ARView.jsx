@@ -18,7 +18,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	const controllerRef = useRef(null);
 	const hitTestSourceRef = useRef(null);
 	const localReferenceSpaceRef = useRef(null);
-	const pontosCarregadosRef = useRef([]);
 	const loaderRef = useRef(new GLTFLoader());
 
 	useEffect(() => {
@@ -159,6 +158,11 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 				model.position.y += 1;
 				model.scale.set(0.1, 0.1, 0.1);
 
+				model.userData = {
+					carregado: true,
+					dadosOriginais: posicaoRelativa,
+				};
+
 				// Cor aleatória
 				const cor = new THREE.Color().setHSL(Math.random(), 0.7, 0.5);
 				model.traverse((child) => {
@@ -168,11 +172,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 				});
 
 				sceneRef.current.add(model);
-
-				model.userData = {
-					carregado: true,
-					dadosOriginais: posicaoRelativa,
-				};
 
 				onCreatePoint(posicaoRelativa);
 			},
@@ -251,11 +250,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 					dadosOriginais: dadosPonto,
 				};
 
-				// Cores diferentes para admin vs usuário
-				const hue = (index * 0.1) % 1;
-				const saturation = mode === "admin" ? 0.5 : 0.7;
-				const lightness = mode === "admin" ? 0.4 : 0.6;
-				const cor = new THREE.Color().setHSL(hue, saturation, lightness);
+				const cor = new THREE.Color().setHSL(Math.random(), 0.7, 0.5);
 
 				model.traverse((child) => {
 					if (child.isMesh) {
@@ -264,7 +259,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 				});
 
 				sceneRef.current.add(model);
-				pontosCarregadosRef.current.push(model);
 			},
 			undefined,
 			(error) => {
@@ -293,7 +287,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		};
 
 		sceneRef.current.add(cube);
-		pontosCarregadosRef.current.push(cube);
 	};
 
 	const calcularPosicaoRelativa = (posicaoAR) => {
@@ -321,8 +314,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 			if (obj.geometry) obj.geometry.dispose();
 			if (obj.material) obj.material.dispose();
 		});
-
-		pontosCarregadosRef.current = [];
 	};
 
 	const onWindowResize = () => {
