@@ -8,6 +8,18 @@
 ![Three.js](https://img.shields.io/badge/Three.js-0.179.1-orange)
 ![Vite](https://img.shields.io/badge/Vite-7.1.2-purple)
 
+> **Projeto de Iniciação Científica - FIAP 2025**
+> 
+> **Desenvolvedores:**
+> 
+> - [Caio Alexandre dos Santos](https://www.linkedin.com/in/caio-alexandre-b778aa221) - RM: 558460
+> - [Leandro do Nascimento Souza](www.linkedin.com/in/leandro-souza-326722181) - RM: 558893
+> - [Rafael de Mônaco Maniezo](https://www.linkedin.com/in/rafaelmmaniezo) - RM: 556079
+> 
+> **Professor Orientador:**
+> [Lucas Silva Borges de Sousa](https://www.linkedin.com/in/lucasss-professor)
+
+
 ---
 
 ## 📋 Sobre o Projeto
@@ -236,4 +248,4 @@ Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalh
 
 ---
 
-**Desenvolvido com ❤️ para revolucionar a navegação em eventos através de Realidade Aumentada**
+**Desenvolvido com ❤️ para revolucionar a navegação em eventos, cidades, supermercados e outros lugares através de Realidade Aumentada**
