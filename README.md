@@ -173,7 +173,7 @@ npx ngrok http 5173
 2. **Use o mesmo QR Code** da calibração do administrador
 3. **Entre no AR e visualize** os pontos criados anteriormente
 
-### 🐛 Bugs Comuns
+### 🐛 Troubleshooting Comum
 
 | Problema | Solução |
 |----------|---------|
