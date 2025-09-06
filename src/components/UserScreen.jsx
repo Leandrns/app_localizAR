@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import QRScanner from "./QRScanner";
 import ARView from "./ARView";
+import "../styles/user.css";
 
 function UserScreen({
 	calibrado,
@@ -64,48 +65,63 @@ function UserScreen({
 	}
 
 	return (
-		<div id="user-screen">
-			<button className="btn btn-back" onClick={onGoHome}>
-				← Voltar
-			</button>
+    <div className="user-container">
+        <main className="user-card">
+            <header className="user-card-header">
+                <h2><i className="fa-solid fa-map-marker-alt"></i> Modo Visitante</h2>
+                <button className="btn-icon" onClick={onGoHome} title="Voltar">
+                    ←
+                </button>
+            </header>
 
-			<div id="info" className="user-header">
-				<strong>👥 Modo Visitante</strong>
-				<br />
-				<div className={calibrado ? "status-calibrado" : "status-nao-calibrado"}>
-					{calibrado ? "✅ Sistema Calibrado" : "❌ Não calibrado"}
-				</div>
-				<button className="btn" onClick={() => setShowQRScanner(true)}>
-					{calibrado ? "Recalibrar" : "Calibrar com QR Code"}
-				</button>
-				<br />
-				<br />
-				<div id="user-instructions">
-					{calibrado && pontoReferencia ? (
-						<>
-							<strong>Evento:</strong> {pontoReferencia.qrCode}
-							<br />
-							<strong>Pontos disponíveis:</strong> {stats.pontosEvento}
-							<br />
-							Entre no AR para visualizar
-						</>
-					) : (
-						<>
-							1. Calibre com o QR Code do evento
-							<br />
-							2. Entre no AR para ver os pontos
-						</>
-					)}
-				</div>
-			</div>
+            {!calibrado ? (
+                // --- ESTADO NÃO CALIBRADO ---
+                <section className="user-card-body calibration-needed">
+                    <div className="status-badge nao-calibrado">
+                        <i className="fa-solid fa-qrcode"></i> Calibração Necessária
+                    </div>
+                    <p className="instructions">
+                        Para começar, aponte a câmera para o QR Code do evento para calibrar sua posição.
+                    </p>
+                    <button className="botao btn-calibrar" onClick={() => setShowQRScanner(true)}>
+                        Calibrar com QR Code
+                    </button>
+                </section>
 
-			<div id="user-stats">
+            ) : (
+                // --- ESTADO CALIBRADO ---
+                <section className="user-card-body calibration-done">
+                    <div className="status-badge calibrado">
+                        <i className="fa-solid fa-check"></i> Sistema Calibrado
+                    </div>
+
+                    <div className="info-group">
+                        <div className="info-item">
+                            <span>Bem-vindo(a) ao evento</span>
+                            {pontoReferencia.qrCode}
+                        </div>
+                    </div>
+                    
+                    <p className="instructions">
+                        Tudo pronto! Clique no botão abaixo para entrar no modo de Realidade Aumentada.
+                    </p>
+
+                    <div className="action-buttons">
+                        <button className="botao btn-recalibrar" onClick={() => setShowQRScanner(true)}>
+                            <i className="fa-solid fa-rotate-right"></i> Recalibrar
+                        </button> 
+					</div>
+                </section>
+            )}
+			</main>
+			{/* <div id="user-stats">
 				<strong>📊 Estatísticas</strong>
 				<br />
 				<div>Pontos disponíveis: {stats.totalPontos}</div>
 				<div>Eventos: {stats.totalEventos}</div>
 				<div>Evento atual: {stats.eventoAtual}</div>
 			</div>
+			*/}
 
 			{showAR && calibrado && (
 				<ARView
@@ -114,8 +130,9 @@ function UserScreen({
 					pontoReferencia={pontoReferencia}
 					pontos={pontos}
 				/>
-			)}
+			)} 
 		</div>
+			
 	);
 }
 

@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import QRScanner from "./QRScanner";
 import ARView from "./ARView";
 import { createClient } from "@supabase/supabase-js";
+import "../styles/admin.css";
+
 
 const supabase = createClient(
 	"https://sgpthwvonmqnlfuxupul.supabase.co",
@@ -106,61 +108,88 @@ function AdminScreen({
 		);
 	}
 
-	return (
-		<div id="admin-screen">
-			<button className="btn btn-back" onClick={onGoHome}>
-				← Voltar
-			</button>
+// 	if (showAR && calibrado) {
+//     return (
+//         <ARView
+//             mode="admin"
+//             calibrado={calibrado}
+//             pontoReferencia={pontoReferencia}
+//             pontos={pontos}
+//             onCreatePoint={handleCreatePoint}
+// 			onExit={() => setShowAR(false)}
+//         />
+//     );
+// }
 
-			<div id="info" className="admin-header">
-				<strong>🔧 Modo Administrador</strong>
-				<br />
-				<div className={calibrado ? "status-calibrado" : "status-nao-calibrado"}>
-					{calibrado ? "✅ Sistema Calibrado" : "❌ Não calibrado"}
-				</div>
-				<button className="btn" onClick={() => setShowQRScanner(true)}>
-					{calibrado ? "Recalibrar" : "Calibrar com QR Code"}
-				</button>
-				<br />
-				<div id="instructions">
-					{calibrado && pontoReferencia ? (
-						<>
-							<strong>QR:</strong> {pontoReferencia.qrCode}
-							<br />
-							Toque no retículo para criar novos pontos
-						</>
-					) : (
-						<>
-							1. Primeiro, faça a calibração
-							<br />
-							2. Depois toque no retículo para criar cubos
-						</>
-					)}
-				</div>
-			</div>
+return (
+    <div className="admin-container">
+        <main className="admin-card">
+            <header className="admin-card-header">
+                <h2><i class="fa-solid fa-wrench"></i> Modo Administrador</h2>
+                <button className="btn-icon" onClick={onGoHome} title="Voltar">
+                    ←
+                </button>
+            </header>
 
-			<div id="status">
-				<div id="points-count">Pontos criados: {pontosCreated}</div>
-				<button
-					className="btn"
-					style={{ background: "#dc3545", marginTop: "10px" }}
-					onClick={handleClearAll}
-				>
-					🗑️ Limpar Todos
-				</button>
-			</div>
+            {!calibrado ? (
+                //NÃO CALIBRADO
+                <section className="admin-card-body calibration-needed">
+                    <div className="status-badge nao-calibrado">
+                        <i class="fa-solid fa-x"></i> Calibração Necessária
+                    </div>
+                    <p className="instructions">
+                        Para começar, aponte a câmera para o QR Code do evento para calibrar a posição.
+                    </p>
+                    <button className="btn-calibrar" onClick={() => setShowQRScanner(true)}>
+                        Calibrar com QR Code
+                    </button>
+                </section>
 
+            ) : (
+				// CALIBRADO
+                <section className="admin-card-body calibration-done">
+                    <div className="status-badge calibrado">
+                        <i class="fa-solid fa-check"></i> Sistema Calibrado
+                    </div>
+
+                    <div className="info-group">
+                        <div className="info-item">
+                            <span>Evento</span>
+                            <strong>{pontoReferencia.qrCode}</strong>
+                        </div>
+                        <div className="info-item">
+                            <span>Pontos Criados</span>
+                            {pontosCreated}
+                        </div>
+                    </div>
+                    
+                    <p className="instructions">
+                        Tudo pronto! Clique no botão Start AR para entrar no modo de Realidade Aumentada.
+                    </p>
+
+                    <div className="action-buttons">
+                        <button className="botao btn-recalibrar" onClick={() => setShowQRScanner(true)}>
+                            <i class="fa-solid fa-rotate-right"></i> Recalibrar
+                        </button>
+						
+                        {/* <button className="botao btn-iniciar" onClick={() => setShowAR(true)}>
+                           <i class="fa-solid fa-vr-cardboard"></i> Iniciar AR
+                        </button> */}
+                    </div> 
+                </section>
+            )}
+        </main>
 			{showAR && calibrado && (
-				<ARView
-					mode="admin"
-					calibrado={calibrado}
-					pontoReferencia={pontoReferencia}
-					pontos={pontos}
-					onCreatePoint={handleCreatePoint}
-				/>
-			)}
-		</div>
-	);
+			<ARView
+				mode="admin"
+				calibrado={calibrado}
+				pontoReferencia={pontoReferencia}
+				pontos={pontos}
+				onCreatePoint={handleCreatePoint}
+			/>
+		)}
+    </div>
+);
 }
 
 export default AdminScreen;
