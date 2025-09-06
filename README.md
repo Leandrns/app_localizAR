@@ -1,4 +1,4 @@
-![alt text](/public/Logo_horizontal_sem_fundo-Photoroom.png)
+![alt text](/public/logo_horizontalsemfundo.png)
 
 **Versão:** 1.0.0  
 **Status:** Em desenvolvimento ativo
