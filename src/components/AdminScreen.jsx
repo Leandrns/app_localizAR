@@ -119,7 +119,7 @@ return (
     <div className="admin-container">
         <main className="admin-card">
             <header className="admin-card-header">
-                <h2><i class="fa-solid fa-wrench"></i> Modo Administrador</h2>
+                <h2><i className="fa-solid fa-wrench"></i> Modo Administrador</h2>
                 <button className="btn-icon" onClick={onGoHome} title="Voltar">
                     <i className="fa-solid fa-arrow-left"></i> Voltar
                 </button>
