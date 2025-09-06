@@ -9,28 +9,21 @@ function HomeScreen({ pontos, onModeChange }) {
         message: 'Nenhum ponto salvo ainda'
       }
     }
-    
-    const eventos = [...new Set(pontos.map(p => p.qrReferencia))]
-    return {
-      totalPontos: pontos.length,
-      totalEventos: eventos.length,
-      message: `📍 ${pontos.length} pontos salvos\n🎪 ${eventos.length} eventos registrados`
-    }
   }, [pontos])
 
   return (
     <div id="home-screen">
-      <h1>🎯 Sistema AR</h1>
+      <img src="/Logo_semfundo.png" alt='Logo LocalizAR' id='imagem'></img>
       <p>
-        Sistema de realidade aumentada para navegação em eventos. Escolha seu modo de
-        acesso:
+        Sistema de realidade aumentada para navegação em eventos. <br></br><br></br>
+        Escolha seu modo de acesso:
       </p>
 
       <button 
         className="home-btn admin-btn" 
         onClick={() => onModeChange('admin')}
       >
-        👨‍💼 Modo Administrador
+        <i class="fa-solid fa-fingerprint"></i>  Modo Administrador
         <br />
         <small>Criar e gerenciar pontos</small>
       </button>
@@ -39,18 +32,10 @@ function HomeScreen({ pontos, onModeChange }) {
         className="home-btn user-btn" 
         onClick={() => onModeChange('user')}
       >
-        👥 Modo Visitante
+        <i class="fa-solid fa-users"></i>  Modo Visitante
         <br />
         <small>Visualizar pontos do evento</small>
       </button>
-
-      <div className="home-stats">
-        <div id="stored-points-info">
-          {stats.message.split('\n').map((line, index) => (
-            <div key={index}>{line}</div>
-          ))}
-        </div>
-      </div>
     </div>
   )
 }
