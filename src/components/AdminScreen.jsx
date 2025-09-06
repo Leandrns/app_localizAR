@@ -1,14 +1,8 @@
 import { useState, useEffect } from "react";
 import QRScanner from "./QRScanner";
 import ARView from "./ARView";
-import { createClient } from "@supabase/supabase-js";
 import "../styles/admin.css";
-
-
-const supabase = createClient(
-	import.meta.env.VITE_SUPABASE_URL,
-	import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import { supabase } from '../supabaseClient'
 
 function AdminScreen({
 	calibrado,
@@ -149,7 +143,7 @@ return (
 				// CALIBRADO
                 <section className="admin-card-body calibration-done">
                     <div className="status-badge calibrado">
-                        <i class="fa-solid fa-check"></i> Sistema Calibrado
+                        <i className="fa-solid fa-check"></i> Sistema Calibrado
                     </div>
 
                     <div className="info-group">
@@ -169,7 +163,7 @@ return (
 
                     <div className="action-buttons">
                         <button className="botao btn-recalibrar" onClick={() => setShowQRScanner(true)}>
-                            <i class="fa-solid fa-rotate-right"></i> Recalibrar
+                            <i className="fa-solid fa-rotate-right"></i> Recalibrar
                         </button>
 						
                         {/* <button className="botao btn-iniciar" onClick={() => setShowAR(true)}>

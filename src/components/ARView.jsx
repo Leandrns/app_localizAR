@@ -2,12 +2,7 @@ import { useRef, useEffect } from "react";
 import * as THREE from "three";
 import { ARButton } from "three/examples/jsm/webxr/ARButton.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-	import.meta.env.VITE_SUPABASE_URL,
-  	import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import { supabase } from '../supabaseClient'
 
 function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	const containerRef = useRef(null);

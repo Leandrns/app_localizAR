@@ -23,7 +23,7 @@ function HomeScreen({ pontos, onModeChange }) {
         className="home-btn admin-btn" 
         onClick={() => onModeChange('admin')}
       >
-        <i class="fa-solid fa-fingerprint"></i>  Modo Administrador
+        <i className="fa-solid fa-fingerprint"></i>  Modo Administrador
         <br />
         <small>Criar e gerenciar pontos</small>
       </button>
@@ -32,7 +32,7 @@ function HomeScreen({ pontos, onModeChange }) {
         className="home-btn user-btn" 
         onClick={() => onModeChange('user')}
       >
-        <i class="fa-solid fa-users"></i>  Modo Visitante
+        <i className="fa-solid fa-users"></i>  Modo Visitante
         <br />
         <small>Visualizar pontos do evento</small>
       </button>
