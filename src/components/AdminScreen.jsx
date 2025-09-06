@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import QRScanner from "./QRScanner";
 import ARView from "./ARView";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+	"https://sgpthwvonmqnlfuxupul.supabase.co",
+	"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNncHRod3Zvbm1xbmxmdXh1cHVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4NDU0NTgsImV4cCI6MjA3MjQyMTQ1OH0.t0zz2ZJOFhWU6LsSdWZLXEgnk7dEB2x_gsCjNVPYZ3Y"
+);
 
 function AdminScreen({
 	calibrado,
@@ -8,7 +14,6 @@ function AdminScreen({
 	pontoReferencia,
 	setPontoReferencia,
 	pontos,
-    setPontos,
 	updatePontos,
 	onGoHome,
 }) {
@@ -51,18 +56,33 @@ function AdminScreen({
 		}
 	};
 
-	const handleCreatePoint = (posicaoRelativa) => {
+	const handleCreatePoint = async (posicaoRelativa) => {
 		const novoPonto = {
 			id: generateId(),
 			posicaoRelativa: posicaoRelativa,
 			qrReferencia: pontoReferencia.qrCode,
 			timestamp: Date.now(),
-			tipo: "cubo",
 			criadoPor: "admin",
 		};
 
 		updatePontos(novoPonto);
 		setPontosCreated((prev) => prev + 1);
+
+		// Salva no Supabase
+		const { error } = await supabase.from("pontos").insert({
+			id: novoPonto.id,
+			pos_x: posicaoRelativa.x,
+			pos_y: posicaoRelativa.y,
+			pos_z: posicaoRelativa.z,
+			qr_referencia: novoPonto.qrReferencia,
+			created_by: novoPonto.criadoPor,
+		});
+
+		if (error) {
+			console.error("Erro ao salvar ponto no Supabase:", error.message);
+		} else {
+			console.log("✅ Ponto salvo no Supabase");
+		}
 	};
 
 	const handleClearAll = () => {

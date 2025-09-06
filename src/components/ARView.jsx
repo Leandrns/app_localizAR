@@ -2,6 +2,12 @@ import { useRef, useEffect } from "react";
 import * as THREE from "three";
 import { ARButton } from "three/examples/jsm/webxr/ARButton.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+	"https://sgpthwvonmqnlfuxupul.supabase.co",
+	"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNncHRod3Zvbm1xbmxmdXh1cHVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4NDU0NTgsImV4cCI6MjA3MjQyMTQ1OH0.t0zz2ZJOFhWU6LsSdWZLXEgnk7dEB2x_gsCjNVPYZ3Y"
+);
 
 function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	const containerRef = useRef(null);
@@ -12,10 +18,11 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	const controllerRef = useRef(null);
 	const hitTestSourceRef = useRef(null);
 	const localReferenceSpaceRef = useRef(null);
-	const pontosCarregadosRef = useRef([]);
 	const loaderRef = useRef(new GLTFLoader());
 
 	useEffect(() => {
+		carregarPontosSalvos();
+
 		if (calibrado && containerRef.current) {
 			initAR();
 		}
@@ -151,6 +158,11 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 				model.position.y += 1;
 				model.scale.set(0.1, 0.1, 0.1);
 
+				model.userData = {
+					carregado: true,
+					dadosOriginais: posicaoRelativa,
+				};
+
 				// Cor aleatória
 				const cor = new THREE.Color().setHSL(Math.random(), 0.7, 0.5);
 				model.traverse((child) => {
@@ -161,14 +173,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 
 				sceneRef.current.add(model);
 
-				model.userData = {
-					carregado: true,
-					dadosOriginais: posicaoRelativa,
-				};
-
-				if (onCreatePoint) {
-					onCreatePoint(posicaoRelativa);
-				}
+				onCreatePoint(posicaoRelativa);
 			},
 			undefined,
 			(error) => {
@@ -195,30 +200,40 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		}
 	};
 
-	const carregarPontosSalvos = () => {
+	// Função para buscar pontos no Supabase
+	const carregarPontosSalvos = async () => {
 		if (!calibrado || !pontoReferencia) return;
 
-		const pontosDoEvento = pontos.filter(
-			(ponto) => ponto.qrReferencia === pontoReferencia.qrCode
-		);
+		try {
+			// Buscar pontos do Supabase
+			const { data, error } = await supabase
+				.from("pontos")
+				.select("*")
+				.eq("qr_referencia", pontoReferencia.qrCode);
 
-		console.log(
-			`Carregando ${pontosDoEvento.length} pontos salvos para modo ${mode}...`
-		);
-
-		pontosDoEvento.forEach((ponto, index) => {
-			const posicaoAbsoluta = new THREE.Vector3(
-				ponto.posicaoRelativa.x,
-				ponto.posicaoRelativa.y,
-				ponto.posicaoRelativa.z
-			);
-
-			if (pontoReferencia.arPosition) {
-				posicaoAbsoluta.add(pontoReferencia.arPosition);
+			if (error) {
+				console.error("Erro ao carregar pontos do Supabase:", error.message);
+				return;
 			}
 
-			criarModeloCarregado(posicaoAbsoluta, ponto, index);
-		});
+			console.log(`Carregando ${data.length} pontos do banco para modo ${mode}...`);
+
+			data.forEach((ponto, index) => {
+				const posicaoAbsoluta = new THREE.Vector3(
+					ponto.pos_x,
+					ponto.pos_y,
+					ponto.pos_z
+				);
+
+				if (pontoReferencia.arPosition) {
+					posicaoAbsoluta.add(pontoReferencia.arPosition.clone());
+				}
+
+				criarModeloCarregado(posicaoAbsoluta, ponto, index);
+			});
+		} catch (err) {
+			console.error("Erro inesperado ao buscar pontos:", err);
+		}
 	};
 
 	const criarModeloCarregado = (posicao, dadosPonto, index) => {
@@ -235,11 +250,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 					dadosOriginais: dadosPonto,
 				};
 
-				// Cores diferentes para admin vs usuário
-				const hue = (index * 0.1) % 1;
-				const saturation = mode === "admin" ? 0.5 : 0.7;
-				const lightness = mode === "admin" ? 0.4 : 0.6;
-				const cor = new THREE.Color().setHSL(hue, saturation, lightness);
+				const cor = new THREE.Color().setHSL(Math.random(), 0.7, 0.5);
 
 				model.traverse((child) => {
 					if (child.isMesh) {
@@ -248,7 +259,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 				});
 
 				sceneRef.current.add(model);
-				pontosCarregadosRef.current.push(model);
 			},
 			undefined,
 			(error) => {
@@ -277,7 +287,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		};
 
 		sceneRef.current.add(cube);
-		pontosCarregadosRef.current.push(cube);
 	};
 
 	const calcularPosicaoRelativa = (posicaoAR) => {
@@ -305,8 +314,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 			if (obj.geometry) obj.geometry.dispose();
 			if (obj.material) obj.material.dispose();
 		});
-
-		pontosCarregadosRef.current = [];
 	};
 
 	const onWindowResize = () => {

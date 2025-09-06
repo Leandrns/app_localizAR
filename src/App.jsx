@@ -38,7 +38,6 @@ function App() {
 					pontoReferencia={pontoReferencia}
 					setPontoReferencia={setPontoReferencia}
 					pontos={pontos}
-                    setPontos={setPontos}
 					updatePontos={updatePontos}
 					onGoHome={resetSystem}
 				/>
