@@ -1,4 +1,4 @@
-# LocalizAR 🎯
+![alt text](/public/Logo_horizontal_sem_fundo-Photoroom.png)
 
 **Versão:** 1.0.0  
 **Status:** Em desenvolvimento ativo
@@ -120,11 +120,12 @@ npm i -g vercel
 vercel
 
 # 4. Seguir as instruções e obter URL HTTPS
+
+# 5. OU seguir passos para deploy no site do Vercel
 ```
 
 **Alternativas de Hospedagem:**
 - **Netlify:** `npm run build` → arrastar pasta `dist` para Netlify
-- **GitHub Pages:** Configurar Actions para deploy automático
 - **Firebase Hosting:** `firebase deploy` após build
 
 **Para Desenvolvimento Local com HTTPS:**
@@ -136,7 +137,7 @@ npx ngrok http 5173
 # (descomentar as linhas no arquivo vite.config.js)
 ```
 
-> 💡 **Dica:** O Vercel oferece deploy gratuito e automático, sendo a opção mais simples para testar AR em dispositivos móveis.
+> 💡 **Dica:** O Vercel oferece deploy gratuito e automático, basta sincronizar sua conta com o GitHub para ter acesso rápido aos projetos, sendo a opção mais simples para testar AR em dispositivos móveis.
 
 ---
 
