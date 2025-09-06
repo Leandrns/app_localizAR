@@ -5,8 +5,8 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
-	"https://sgpthwvonmqnlfuxupul.supabase.co",
-	"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNncHRod3Zvbm1xbmxmdXh1cHVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4NDU0NTgsImV4cCI6MjA3MjQyMTQ1OH0.t0zz2ZJOFhWU6LsSdWZLXEgnk7dEB2x_gsCjNVPYZ3Y"
+	import.meta.env.VITE_SUPABASE_URL,
+  	import.meta.env.VITE_SUPABASE_ANON_KEY
 );
 
 function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
