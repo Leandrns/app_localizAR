@@ -115,7 +115,7 @@ html, body, #root {
     transition: all 0.2s ease-in-out;
 }
 
-.btn-calibrar{
+.btn-calibrar-user {
     background-color: #505552;
     border: solid 2px #4ecdc4;
     color: white;
@@ -141,7 +141,7 @@ html, body, #root {
     background: none;
     border: none;
     color: #a0a0a0;
-    font-size: 1.5rem;
+    font-size: 1rem;
     cursor: pointer;
     padding: 0 0.5rem;
 }

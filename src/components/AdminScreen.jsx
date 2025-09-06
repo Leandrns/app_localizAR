@@ -121,7 +121,7 @@ return (
             <header className="admin-card-header">
                 <h2><i class="fa-solid fa-wrench"></i> Modo Administrador</h2>
                 <button className="btn-icon" onClick={onGoHome} title="Voltar">
-                    ←
+                    <i className="fa-solid fa-arrow-left"></i> Voltar
                 </button>
             </header>
 
@@ -129,12 +129,12 @@ return (
                 //NÃO CALIBRADO
                 <section className="admin-card-body calibration-needed">
                     <div className="status-badge nao-calibrado">
-                        <i class="fa-solid fa-x"></i> Calibração Necessária
+                        <i className="fa-solid fa-qrcode"></i> Calibração Necessária
                     </div>
                     <p className="instructions">
                         Para começar, aponte a câmera para o QR Code do evento para calibrar a posição.
                     </p>
-                    <button className="btn-calibrar" onClick={() => setShowQRScanner(true)}>
+                    <button className="btn-calibrar-admin" onClick={() => setShowQRScanner(true)}>
                         Calibrar com QR Code
                     </button>
                 </section>

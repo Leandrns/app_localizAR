@@ -115,7 +115,7 @@ html, body, #root {
     transition: all 0.2s ease-in-out;
 }
 
-.btn-calibrar{
+.btn-calibrar-admin {
     background-color: #505552;
     border: solid 2px #05d545;
     color: white;
@@ -140,8 +140,8 @@ html, body, #root {
 .btn-icon {
     background: none;
     border: none;
-    color: #a0a0a0;
-    font-size: 1.5rem;
+    color: #a8a8a8;
+    font-size: 1rem;
     cursor: pointer;
     padding: 0 0.5rem;
 }
