@@ -38,6 +38,10 @@
   z-index: 20;
 }
 
+.imagem{
+  width: 310px;
+}
+
 #home-screen p {
   font-size: 1.1em;
   margin-bottom: 40px;
@@ -218,6 +222,6 @@
 
 @media (max-width: 500px) {
   #imagem{
-    width: 240px;
+    width: 255px;
   }
 }
