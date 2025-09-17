@@ -14,6 +14,12 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	const hitTestSourceRef = useRef(null);
 	const localReferenceSpaceRef = useRef(null);
 	const loaderRef = useRef(new GLTFLoader());
+	
+	// Novos refs para interação
+	const raycasterRef = useRef(new THREE.Raycaster());
+	const pointerRef = useRef(new THREE.Vector2());
+	const interactiveObjectsRef = useRef([]);
+	const animatingObjectsRef = useRef(new Set());
 
 	useEffect(() => {
 		carregarPontosSalvos();
@@ -89,8 +95,130 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		renderer.xr.addEventListener("sessionstart", onSessionStart);
 		renderer.xr.addEventListener("sessionend", onSessionEnd);
 		window.addEventListener("resize", onWindowResize);
+		
+		// Adicionar event listeners para interação apenas no modo visitante
+		if (mode === "user") {
+			container.addEventListener("click", onContainerClick);
+			container.addEventListener("touchend", onContainerClick);
+		}
 
 		animate();
+	};
+
+	// Nova função para lidar com cliques/toques no container
+	const onContainerClick = (event) => {
+		if (mode !== "user") return;
+		if (!cameraRef.current || !sceneRef.current) return;
+		if (animatingObjectsRef.current.size > 0) return; // Evita cliques durante animações
+
+		event.preventDefault();
+
+		// Calcular posição normalizada do ponteiro
+		const rect = containerRef.current.getBoundingClientRect();
+		let clientX, clientY;
+
+		if (event.type === "touchend" && event.changedTouches) {
+			clientX = event.changedTouches[0].clientX;
+			clientY = event.changedTouches[0].clientY;
+		} else {
+			clientX = event.clientX;
+			clientY = event.clientY;
+		}
+
+		pointerRef.current.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+		pointerRef.current.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+
+		// Raycasting para detectar objetos interativos
+		raycasterRef.current.setFromCamera(pointerRef.current, cameraRef.current);
+		const intersects = raycasterRef.current.intersectObjects(interactiveObjectsRef.current, true);
+
+		if (intersects.length > 0) {
+			const clickedObject = intersects[0].object;
+			
+			// Encontrar o objeto pai (modelo completo)
+			let targetObject = clickedObject;
+			while (targetObject.parent && !targetObject.userData.isInteractiveMarker) {
+				targetObject = targetObject.parent;
+			}
+
+			if (targetObject.userData.isInteractiveMarker) {
+				animateFlip(targetObject);
+			}
+		}
+	};
+
+	// Nova função para animar o flip
+	const animateFlip = (object) => {
+		if (animatingObjectsRef.current.has(object)) return;
+		
+		animatingObjectsRef.current.add(object);
+		
+		const originalRotation = object.rotation.y;
+		const targetRotation = originalRotation + Math.PI; // Rotação de 180 graus
+		const duration = 800; // Duração em ms
+		const startTime = performance.now();
+
+		// Função de easing para suavizar a animação
+		const easeInOutQuad = (t) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+
+		const animate = (currentTime) => {
+			const elapsed = currentTime - startTime;
+			const progress = Math.min(elapsed / duration, 1);
+			const easedProgress = easeInOutQuad(progress);
+
+			object.rotation.y = originalRotation + (targetRotation - originalRotation) * easedProgress;
+
+			// Adicionar um pequeno efeito de escala durante a rotação
+			const scaleEffect = 1 + Math.sin(progress * Math.PI) * 0.1;
+			object.scale.setScalar(0.1 * scaleEffect);
+
+			if (progress < 1) {
+				requestAnimationFrame(animate);
+			} else {
+				// Resetar escala e remover da lista de animação
+				object.scale.setScalar(0.1);
+				animatingObjectsRef.current.delete(object);
+				
+				// Feedback visual opcional - brilho temporário
+				addGlowEffect(object);
+			}
+		};
+
+		requestAnimationFrame(animate);
+	};
+
+	// Nova função para adicionar efeito de brilho após o flip
+	const addGlowEffect = (object) => {
+		const originalColor = new THREE.Color();
+		const glowColor = new THREE.Color(0xffffff);
+		
+		object.traverse((child) => {
+			if (child.isMesh && child.material) {
+				originalColor.copy(child.material.color);
+				
+				// Animar para branco e voltar
+				const glowDuration = 300;
+				const startTime = performance.now();
+				
+				const animateGlow = (currentTime) => {
+					const elapsed = currentTime - startTime;
+					const progress = Math.min(elapsed / glowDuration, 1);
+					
+					// Efeito de pulso: 0 -> 1 -> 0
+					const intensity = Math.sin(progress * Math.PI);
+					
+					child.material.color.lerpColors(originalColor, glowColor, intensity * 0.5);
+					
+					if (progress < 1) {
+						requestAnimationFrame(animateGlow);
+					} else {
+						child.material.color.copy(originalColor);
+					}
+				};
+				
+				requestAnimationFrame(animateGlow);
+			}
+		});
 	};
 
 	const onSessionStart = () => {
@@ -243,6 +371,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 				model.userData = {
 					carregado: true,
 					dadosOriginais: dadosPonto,
+					isInteractiveMarker: mode === "user" // Marca como interativo apenas no modo visitante
 				};
 
 				const cor = new THREE.Color().setHSL(Math.random(), 0.7, 0.5);
@@ -254,6 +383,11 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 				});
 
 				sceneRef.current.add(model);
+				
+				// Adicionar à lista de objetos interativos apenas no modo visitante
+				if (mode === "user") {
+					interactiveObjectsRef.current.push(model);
+				}
 			},
 			undefined,
 			(error) => {
@@ -279,9 +413,15 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		cube.userData = {
 			carregado: true,
 			dadosOriginais: dadosPonto,
+			isInteractiveMarker: mode === "user"
 		};
 
 		sceneRef.current.add(cube);
+		
+		// Adicionar à lista de objetos interativos apenas no modo visitante
+		if (mode === "user") {
+			interactiveObjectsRef.current.push(cube);
+		}
 	};
 
 	const calcularPosicaoRelativa = (posicaoAR) => {
@@ -309,6 +449,10 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 			if (obj.geometry) obj.geometry.dispose();
 			if (obj.material) obj.material.dispose();
 		});
+		
+		// Limpar listas de objetos interativos
+		interactiveObjectsRef.current = [];
+		animatingObjectsRef.current.clear();
 	};
 
 	const onWindowResize = () => {
@@ -373,6 +517,12 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		}
 
 		window.removeEventListener("resize", onWindowResize);
+		
+		// Remover event listeners de interação
+		if (containerRef.current) {
+			containerRef.current.removeEventListener("click", onContainerClick);
+			containerRef.current.removeEventListener("touchend", onContainerClick);
+		}
 
 		limparObjetosAR();
 
@@ -382,17 +532,51 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	};
 
 	return (
-		<div
-			ref={containerRef}
-			style={{
-				position: "fixed",
-				top: 0,
-				left: 0,
-				width: "100%",
-				height: "100%",
-				zIndex: 1,
-			}}
-		/>
+		<>
+			<div
+				ref={containerRef}
+				style={{
+					position: "fixed",
+					top: 0,
+					left: 0,
+					width: "100%",
+					height: "100%",
+					zIndex: 1,
+				}}
+			/>
+			
+			{/* Instrução visual apenas no modo visitante */}
+			{mode === "user" && calibrado && (
+				<div
+					style={{
+						position: "fixed",
+						bottom: "20px",
+						left: "50%",
+						transform: "translateX(-50%)",
+						background: "rgba(0, 0, 0, 0.8)",
+						color: "#4ecdc4",
+						padding: "10px 20px",
+						borderRadius: "25px",
+						fontSize: "14px",
+						zIndex: 10,
+						border: "1px solid #4ecdc4",
+						backdropFilter: "blur(10px)",
+						textAlign: "center",
+						animation: "pulse 2s infinite",
+					}}
+				>
+					<style>
+						{`
+							@keyframes pulse {
+								0%, 100% { opacity: 0.7; }
+								50% { opacity: 1; }
+							}
+						`}
+					</style>
+					👆 Toque nos marcadores para vê-los girar!
+				</div>
+			)}
+		</>
 	);
 }
 
