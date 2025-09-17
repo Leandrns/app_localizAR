@@ -14,11 +14,11 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	const hitTestSourceRef = useRef(null);
 	const localReferenceSpaceRef = useRef(null);
 	const loaderRef = useRef(new GLTFLoader());
-	
-	// Novos refs para interação
+	const selectableObjectsRef = useRef([]); // objetos que podem ser selecionados (modelos/cubos)
 	const raycasterRef = useRef(new THREE.Raycaster());
-	const pointerRef = useRef(new THREE.Vector2());
-	const interactiveObjectsRef = useRef([]);
+	const tempMatrixRef = useRef(new THREE.Matrix4());
+	const flipAnimationsRef = useRef([]); // animações ativas
+	const lastTimestampRef = useRef(0);
 
 	useEffect(() => {
 		carregarPontosSalvos();
@@ -30,7 +30,8 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		return () => {
 			cleanup();
 		};
-	}, [calibrado]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [calibrado, mode]);
 
 	const initAR = () => {
 		const container = containerRef.current;
@@ -84,7 +85,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 			scene.add(reticle);
 		}
 
-		// Controller
+		// Controller - um único handler que faz ações diferentes conforme mode
 		const controller = renderer.xr.getController(0);
 		controller.addEventListener("select", onSelect);
 		controllerRef.current = controller;
@@ -96,116 +97,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		window.addEventListener("resize", onWindowResize);
 
 		animate();
-	};
-
-	// Função simplificada para lidar com cliques/toques no container
-	const onContainerClick = (event) => {
-		if (mode !== "user") return;
-		if (!cameraRef.current || !sceneRef.current) return;
-		if (!rendererRef.current?.xr?.isPresenting) return; // Só funciona se AR estiver ativo
-
-		event.preventDefault();
-		event.stopPropagation();
-
-		// Calcular posição normalizada do ponteiro
-		const rect = containerRef.current.getBoundingClientRect();
-		let clientX, clientY;
-
-		if (event.type === "touchend" && event.changedTouches && event.changedTouches.length > 0) {
-			clientX = event.changedTouches[0].clientX;
-			clientY = event.changedTouches[0].clientY;
-		} else if (event.type === "click") {
-			clientX = event.clientX;
-			clientY = event.clientY;
-		} else {
-			return;
-		}
-
-		pointerRef.current.x = ((clientX - rect.left) / rect.width) * 2 - 1;
-		pointerRef.current.y = -((clientY - rect.top) / rect.height) * 2 + 1;
-
-		// Raycasting para detectar objetos interativos
-		raycasterRef.current.setFromCamera(pointerRef.current, cameraRef.current);
-		const intersects = raycasterRef.current.intersectObjects(interactiveObjectsRef.current.children, true);
-
-		if (intersects.length > 0) {
-			const obj = intersects[0].object;
-  			alert("Ponto clicado!");
-		}
-	};
-
-	// Nova função para animar o flip
-	const animateFlip = (object) => {
-		if (animatingObjectsRef.current.has(object)) return;
-		
-		animatingObjectsRef.current.add(object);
-		
-		const originalRotation = object.rotation.y;
-		const targetRotation = originalRotation + Math.PI; // Rotação de 180 graus
-		const duration = 800; // Duração em ms
-		const startTime = performance.now();
-
-		// Função de easing para suavizar a animação
-		const easeInOutQuad = (t) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-
-		const animate = (currentTime) => {
-			const elapsed = currentTime - startTime;
-			const progress = Math.min(elapsed / duration, 1);
-			const easedProgress = easeInOutQuad(progress);
-
-			object.rotation.y = originalRotation + (targetRotation - originalRotation) * easedProgress;
-
-			// Adicionar um pequeno efeito de escala durante a rotação
-			const scaleEffect = 1 + Math.sin(progress * Math.PI) * 0.1;
-			object.scale.setScalar(0.1 * scaleEffect);
-
-			if (progress < 1) {
-				requestAnimationFrame(animate);
-			} else {
-				// Resetar escala e remover da lista de animação
-				object.scale.setScalar(0.1);
-				animatingObjectsRef.current.delete(object);
-				
-				// Feedback visual opcional - brilho temporário
-				addGlowEffect(object);
-			}
-		};
-
-		requestAnimationFrame(animate);
-	};
-
-	// Nova função para adicionar efeito de brilho após o flip
-	const addGlowEffect = (object) => {
-		const originalColor = new THREE.Color();
-		const glowColor = new THREE.Color(0xffffff);
-		
-		object.traverse((child) => {
-			if (child.isMesh && child.material) {
-				originalColor.copy(child.material.color);
-				
-				// Animar para branco e voltar
-				const glowDuration = 300;
-				const startTime = performance.now();
-				
-				const animateGlow = (currentTime) => {
-					const elapsed = currentTime - startTime;
-					const progress = Math.min(elapsed / glowDuration, 1);
-					
-					// Efeito de pulso: 0 -> 1 -> 0
-					const intensity = Math.sin(progress * Math.PI);
-					
-					child.material.color.lerpColors(originalColor, glowColor, intensity * 0.5);
-					
-					if (progress < 1) {
-						requestAnimationFrame(animateGlow);
-					} else {
-						child.material.color.copy(originalColor);
-					}
-				};
-				
-				requestAnimationFrame(animateGlow);
-			}
-		});
 	};
 
 	const onSessionStart = () => {
@@ -234,17 +125,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 				}, 1000);
 			}
 		});
-
-		// Adicionar event listeners para interação apenas no modo visitante APÓS o AR iniciar
-		if (mode === "user" && containerRef.current) {
-			// Aguardar um pouco para garantir que o AR está totalmente inicializado
-			setTimeout(() => {
-				if (containerRef.current) {
-					containerRef.current.addEventListener("click", onContainerClick);
-					containerRef.current.addEventListener("touchend", onContainerClick);
-				}
-			}, 1000);
-		}
 	};
 
 	const onSessionEnd = () => {
@@ -253,62 +133,116 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		if (reticleRef.current) {
 			reticleRef.current.visible = false;
 		}
-		
-		// Remover event listeners de interação quando AR termina
-		if (containerRef.current) {
-			containerRef.current.removeEventListener("click", onContainerClick);
-			containerRef.current.removeEventListener("touchend", onContainerClick);
-		}
 		limparObjetosAR();
+		flipAnimationsRef.current = [];
+		lastTimestampRef.current = 0;
+		selectableObjectsRef.current = [];
 	};
 
-	const onSelect = () => {
-		if (mode !== "admin") return;
-		if (!calibrado) {
-			alert("Faça a calibração primeiro!");
+	// Handler único para select — cria ponto no admin, dispara flip no visitante
+	const onSelect = (event) => {
+		// Se for admin, segue criando pontos (como antes)
+		if (mode === "admin") {
+			if (!calibrado) {
+				alert("Faça a calibração primeiro!");
+				return;
+			}
+			if (!reticleRef.current || !reticleRef.current.visible) return;
+
+			// Pega posição do retículo
+			const position = new THREE.Vector3();
+			position.setFromMatrixPosition(reticleRef.current.matrix);
+
+			const posicaoRelativa = calcularPosicaoRelativa(position);
+
+			// Carrega modelo 3D
+			loaderRef.current.load(
+				"/map_pointer_3d_icon.glb",
+				(gltf) => {
+					const model = gltf.scene;
+					model.position.copy(position);
+					model.position.y += 1;
+					model.scale.set(0.1, 0.1, 0.1);
+
+					model.userData = {
+						carregado: true,
+						dadosOriginais: posicaoRelativa,
+					};
+
+					// Cor aleatória
+					const cor = new THREE.Color().setHSL(Math.random(), 0.7, 0.5);
+					model.traverse((child) => {
+						if (child.isMesh) {
+							if (child.material) child.material = child.material.clone();
+							child.material.color = cor;
+						}
+					});
+
+					sceneRef.current.add(model);
+					// adiciona ao selectable para consistência (opcional no admin)
+					selectableObjectsRef.current.push(model);
+
+					if (onCreatePoint) onCreatePoint(posicaoRelativa);
+				},
+				undefined,
+				(error) => {
+					console.error("Erro ao carregar modelo:", error);
+					// Fallback para cubo simples
+					criarCuboFallback(position, posicaoRelativa);
+				}
+			);
 			return;
 		}
-		if (!reticleRef.current || !reticleRef.current.visible) return;
 
-		// Pega posição do retículo
-		const position = new THREE.Vector3();
-		position.setFromMatrixPosition(reticleRef.current.matrix);
+		// Modo visitante: detectar interseção com objetos carregados e iniciar flip
+		if (mode === "user") {
+			const controller = controllerRef.current;
+			const scene = sceneRef.current;
+			if (!controller || !scene) return;
 
-		const posicaoRelativa = calcularPosicaoRelativa(position);
+			// Raycast a partir do controller
+			const raycaster = raycasterRef.current;
+			const tempMatrix = tempMatrixRef.current;
+			tempMatrix.identity().extractRotation(controller.matrixWorld);
 
-		// Carrega modelo 3D
-		loaderRef.current.load(
-			"/map_pointer_3d_icon.glb",
-			(gltf) => {
-				const model = gltf.scene;
-				model.position.copy(position);
-				model.position.y += 1;
-				model.scale.set(0.1, 0.1, 0.1);
+			raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+			raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
 
-				model.userData = {
-					carregado: true,
-					dadosOriginais: posicaoRelativa,
-				};
+			const intersects = raycaster.intersectObjects(selectableObjectsRef.current, true);
+			if (intersects.length > 0) {
+				// pegar o objeto raiz (o GLTF scene ou cube)
+				let selected = intersects[0].object;
+				let root = selected;
+				while (root.parent && !root.userData?.carregado) {
+					root = root.parent;
+				}
+				// se root não tiver flag, usar selected
+				if (!root.userData) root = selected;
 
-				// Cor aleatória
-				const cor = new THREE.Color().setHSL(Math.random(), 0.7, 0.5);
-				model.traverse((child) => {
-					if (child.isMesh) {
-						child.material.color = cor;
-					}
-				});
-
-				sceneRef.current.add(model);
-
-				onCreatePoint(posicaoRelativa);
-			},
-			undefined,
-			(error) => {
-				console.error("Erro ao carregar modelo:", error);
-				// Fallback para cubo simples
-				criarCuboFallback(position, posicaoRelativa);
+				// Iniciar animação de flip (rotaciona em X)
+				startFlipAnimation(root, { axis: "x", degree: Math.PI, duration: 600 });
 			}
-		);
+		}
+	};
+
+	// inicia animação de flip: axis = 'x'|'y'|'z', degree em radianos, duration em ms
+	const startFlipAnimation = (object3D, { axis = "x", degree = Math.PI, duration = 600 } = {}) => {
+		if (!object3D) return;
+		const start = object3D.rotation[axis];
+		const target = start + degree;
+		flipAnimationsRef.current.push({
+			object: object3D,
+			axis,
+			start,
+			target,
+			elapsed: 0,
+			duration,
+		});
+	};
+
+	// easing (easeOutQuad)
+	const easeOutQuad = (t) => {
+		return t * (2 - t);
 	};
 
 	const criarCuboFallback = (position, posicaoRelativa) => {
@@ -320,7 +254,13 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		cube.position.copy(position);
 		cube.position.y += 0.05;
 
+		cube.userData = {
+			carregado: true,
+			dadosOriginais: posicaoRelativa,
+		};
+
 		sceneRef.current.add(cube);
+		selectableObjectsRef.current.push(cube);
 
 		if (onCreatePoint) {
 			onCreatePoint(posicaoRelativa);
@@ -375,23 +315,20 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 				model.userData = {
 					carregado: true,
 					dadosOriginais: dadosPonto,
-					isInteractiveMarker: mode === "user" // Marca como interativo apenas no modo visitante
 				};
 
 				const cor = new THREE.Color().setHSL(Math.random(), 0.7, 0.5);
 
 				model.traverse((child) => {
 					if (child.isMesh) {
+						if (child.material) child.material = child.material.clone();
 						child.material.color = cor;
 					}
 				});
 
 				sceneRef.current.add(model);
-				
-				// Adicionar à lista de objetos interativos apenas no modo visitante
-				if (mode === "user") {
-					interactiveObjectsRef.current.push(model);
-				}
+				// adiciona ao array de selecionáveis
+				selectableObjectsRef.current.push(model);
 			},
 			undefined,
 			(error) => {
@@ -417,15 +354,10 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		cube.userData = {
 			carregado: true,
 			dadosOriginais: dadosPonto,
-			isInteractiveMarker: mode === "user"
 		};
 
 		sceneRef.current.add(cube);
-		
-		// Adicionar à lista de objetos interativos apenas no modo visitante
-		if (mode === "user") {
-			interactiveObjectsRef.current.push(cube);
-		}
+		selectableObjectsRef.current.push(cube);
 	};
 
 	const calcularPosicaoRelativa = (posicaoAR) => {
@@ -449,13 +381,21 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		});
 
 		objetosParaRemover.forEach((obj) => {
-			sceneRef.current.remove(obj);
+			if (obj.parent) obj.parent.remove(obj);
 			if (obj.geometry) obj.geometry.dispose();
-			if (obj.material) obj.material.dispose();
+			if (obj.material) {
+				// materiais podem ser arrays ou objetos
+				if (Array.isArray(obj.material)) {
+					obj.material.forEach((m) => m.dispose && m.dispose());
+				} else {
+					obj.material.dispose && obj.material.dispose();
+				}
+			}
 		});
-		
-		// Limpar listas de objetos interativos
-		interactiveObjectsRef.current = [];
+
+		// limpar arrays auxiliares
+		selectableObjectsRef.current = [];
+		flipAnimationsRef.current = [];
 	};
 
 	const onWindowResize = () => {
@@ -484,6 +424,12 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		const hitTestSource = hitTestSourceRef.current;
 		const localReferenceSpace = localReferenceSpaceRef.current;
 
+		// calcular delta time (ms)
+		const last = lastTimestampRef.current || timestamp;
+		const deltaMs = timestamp - last;
+		lastTimestampRef.current = timestamp;
+
+		// Atualizar hit-test / reticle
 		if (frame && hitTestSource && localReferenceSpace) {
 			const hitTestResults = frame.getHitTestResults(hitTestSource);
 
@@ -505,6 +451,28 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 			}
 		}
 
+		// Atualizar animações de flip (se houver)
+		if (flipAnimationsRef.current.length > 0) {
+			// iterar e atualizar
+			const toRemove = [];
+			flipAnimationsRef.current.forEach((anim, idx) => {
+				anim.elapsed += deltaMs;
+				const t = Math.min(anim.elapsed / anim.duration, 1);
+				const eased = easeOutQuad(t);
+				const newRot = anim.start + (anim.target - anim.start) * eased;
+				if (anim.object && anim.object.rotation) {
+					anim.object.rotation[anim.axis] = newRot;
+				}
+				if (t >= 1) {
+					toRemove.push(idx);
+				}
+			});
+			// remover do final para não bagunçar índices
+			for (let i = toRemove.length - 1; i >= 0; i--) {
+				flipAnimationsRef.current.splice(toRemove[i], 1);
+			}
+		}
+
 		if (renderer && scene && camera) {
 			renderer.render(scene, camera);
 		}
@@ -514,18 +482,12 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		if (rendererRef.current) {
 			rendererRef.current.setAnimationLoop(null);
 
-			if (rendererRef.current.xr.getSession()) {
+			if (rendererRef.current.xr.getSession && rendererRef.current.xr.getSession()) {
 				rendererRef.current.xr.getSession().end();
 			}
 		}
 
 		window.removeEventListener("resize", onWindowResize);
-		
-		// Remover event listeners de interação
-		if (containerRef.current) {
-			containerRef.current.removeEventListener("click", onContainerClick);
-			containerRef.current.removeEventListener("touchend", onContainerClick);
-		}
 
 		limparObjetosAR();
 
