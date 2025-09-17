@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import QRScanner from "./QRScanner";
 import ARView from "./ARView";
 import "../styles/user.css";
@@ -30,15 +30,14 @@ function UserScreen({
 			setCalirado(true);
 			setShowQRScanner(false);
 
-			const pontosDoEvento = pontos.filter((p) => p.qrReferencia === qrData);
+			setTimeout(() => {
+				setQntdPontos(getQtndPontos(pontoReferencia.qrCode))
+			}, 1000)
 			
-			setQntdPontos(getQtndPontos(pontoReferencia.qrCode))
-
 			alert(
 				`Calibração realizada!\nEvento: ${qrData}\nPontos disponíveis: ${qntdPontos}\nEntre no modo AR para visualizar.`
 			);
 
-			// Inicializar AR automaticamente
 			setTimeout(() => {
 				setShowAR(true);
 			}, 500);
