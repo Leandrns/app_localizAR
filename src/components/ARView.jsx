@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import * as THREE from "three";
 import { ARButton } from "three/examples/jsm/webxr/ARButton.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -19,7 +19,10 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	const raycasterRef = useRef(new THREE.Raycaster());
 	const pointerRef = useRef(new THREE.Vector2());
 	const interactiveObjectsRef = useRef([]);
-	const animatingObjectsRef = useRef(new Set());
+	
+	// Estado para controlar o modal
+	const [showModal, setShowModal] = useState(false);
+	const [modalContent, setModalContent] = useState("");
 
 	useEffect(() => {
 		carregarPontosSalvos();
@@ -99,7 +102,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		animate();
 	};
 
-	// Nova função para lidar com cliques/toques no container
+	// Função simplificada para lidar com cliques/toques no container
 	const onContainerClick = (event) => {
 		if (mode !== "user") return;
 		if (!cameraRef.current || !sceneRef.current) return;
@@ -140,13 +143,11 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 				
 				while (targetObject && attempts < 10) {
 					if (targetObject.userData && targetObject.userData.isInteractiveMarker) {
-						// Verificar se não está animando
-						if (!animatingObjectsRef.current.has(targetObject)) {
-							animateFlip(targetObject);
-							return;
-						} else {
-							return;
-						}
+						// Mostrar modal com informações do ponto
+						const pontoInfo = targetObject.userData.dadosOriginais;
+						setModalContent(`Ponto clicado!\nID: ${pontoInfo.id || 'N/A'}\nEvento: ${pontoReferencia?.qrCode || 'N/A'}`);
+						setShowModal(true);
+						return;
 					}
 					
 					targetObject = targetObject.parent;
@@ -281,7 +282,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 			containerRef.current.removeEventListener("click", onContainerClick);
 			containerRef.current.removeEventListener("touchend", onContainerClick);
 		}
-		
 		limparObjetosAR();
 	};
 
@@ -479,7 +479,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		
 		// Limpar listas de objetos interativos
 		interactiveObjectsRef.current = [];
-		animatingObjectsRef.current.clear();
 	};
 
 	const onWindowResize = () => {
@@ -559,17 +558,96 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	};
 
 	return (
-		<div
-			ref={containerRef}
-			style={{
-				position: "fixed",
-				top: 0,
-				left: 0,
-				width: "100%",
-				height: "100%",
-				zIndex: 1,
-			}}
-		/>
+		<>
+			<div
+				ref={containerRef}
+				style={{
+					position: "fixed",
+					top: 0,
+					left: 0,
+					width: "100%",
+					height: "100%",
+					zIndex: 1,
+				}}
+			/>
+			
+			{/* Modal de Informações do Ponto */}
+			{showModal && (
+				<div
+					style={{
+						position: "fixed",
+						top: 0,
+						left: 0,
+						width: "100%",
+						height: "100%",
+						backgroundColor: "rgba(0, 0, 0, 0.7)",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						zIndex: 1000,
+						backdropFilter: "blur(5px)",
+					}}
+					onClick={() => setShowModal(false)}
+				>
+					<div
+						style={{
+							backgroundColor: "#1e1e1e",
+							color: "#fff",
+							padding: "20px 30px",
+							borderRadius: "12px",
+							border: "2px solid #4ecdc4",
+							boxShadow: "0 8px 32px rgba(0, 0, 0, 0.5)",
+							textAlign: "center",
+							minWidth: "300px",
+							maxWidth: "90%",
+						}}
+						onClick={(e) => e.stopPropagation()}
+					>
+						<div
+							style={{
+								fontSize: "18px",
+								marginBottom: "15px",
+								color: "#4ecdc4",
+								fontWeight: "bold",
+							}}
+						>
+							<i className="fa-solid fa-map-marker-alt"></i> Marcador Detectado
+						</div>
+						
+						<div
+							style={{
+								fontSize: "14px",
+								lineHeight: "1.6",
+								marginBottom: "20px",
+								whiteSpace: "pre-line",
+								color: "#e0e0e0",
+							}}
+						>
+							{modalContent}
+						</div>
+						
+						<button
+							onClick={() => setShowModal(false)}
+							style={{
+								backgroundColor: "#4ecdc4",
+								color: "#1e1e1e",
+								border: "none",
+								padding: "10px 20px",
+								borderRadius: "6px",
+								fontSize: "14px",
+								fontWeight: "bold",
+								cursor: "pointer",
+								transition: "all 0.2s ease",
+							}}
+							onMouseOver={(e) => e.target.style.backgroundColor = "#45b7aa"}
+							onMouseOut={(e) => e.target.style.backgroundColor = "#4ecdc4"}
+						>
+							Fechar
+						</button>
+					</div>
+				</div>
+			)}
+		</>
 	);
 }
 
