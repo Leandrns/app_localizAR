@@ -544,38 +544,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 					zIndex: 1,
 				}}
 			/>
-			
-			{/* Instrução visual apenas no modo visitante */}
-			{mode === "user" && calibrado && (
-				<div
-					style={{
-						position: "fixed",
-						bottom: "20px",
-						left: "50%",
-						transform: "translateX(-50%)",
-						background: "rgba(0, 0, 0, 0.8)",
-						color: "#4ecdc4",
-						padding: "10px 20px",
-						borderRadius: "25px",
-						fontSize: "14px",
-						zIndex: 10,
-						border: "1px solid #4ecdc4",
-						backdropFilter: "blur(10px)",
-						textAlign: "center",
-						animation: "pulse 2s infinite",
-					}}
-				>
-					<style>
-						{`
-							@keyframes pulse {
-								0%, 100% { opacity: 0.7; }
-								50% { opacity: 1; }
-							}
-						`}
-					</style>
-					👆 Toque nos marcadores para vê-los girar!
-				</div>
-			)}
 		</>
 	);
 }
