@@ -32,7 +32,7 @@ function UserScreen({
 
 			setTimeout(() => {
 				setQntdPontos(getQtndPontos(pontoReferencia.qrCode))
-			}, 1000)
+			}, 5000)
 			
 			alert(
 				`Calibração realizada!\nEvento: ${qrData}\nPontos disponíveis: ${qntdPontos}\nEntre no modo AR para visualizar.`
