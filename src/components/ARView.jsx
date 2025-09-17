@@ -126,28 +126,11 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 
 		// Raycasting para detectar objetos interativos
 		raycasterRef.current.setFromCamera(pointerRef.current, cameraRef.current);
-		const intersects = raycasterRef.current.intersectObjects(sceneRef.current.children, true);
+		const intersects = raycasterRef.current.intersectObjects(interactiveObjectsRef.current.children, true);
 
 		if (intersects.length > 0) {
-			// Procurar por objetos interativos nas intersecções
-			for (let i = 0; i < intersects.length; i++) {
-				const intersectedObject = intersects[i].object;
-				
-				// Percorrer a hierarquia para encontrar o marcador
-				let targetObject = intersectedObject;
-				let attempts = 0;
-				
-				while (targetObject && attempts < 10) {
-					if (targetObject.userData && targetObject.userData.isInteractiveMarker) {
-						// Mostrar popup simples
-						alert("Ponto clicado!");
-						return;
-					}
-					
-					targetObject = targetObject.parent;
-					attempts++;
-				}
-			}
+			const obj = intersects[0].object;
+  			alert("Ponto clicado!");
 		}
 	};
 
