@@ -103,21 +103,23 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	const onContainerClick = (event) => {
 		if (mode !== "user") return;
 		if (!cameraRef.current || !sceneRef.current) return;
-		if (animatingObjectsRef.current.size > 0) return; // Evita cliques durante animações
 		if (!rendererRef.current?.xr?.isPresenting) return; // Só funciona se AR estiver ativo
 
 		event.preventDefault();
+		event.stopPropagation();
 
 		// Calcular posição normalizada do ponteiro
 		const rect = containerRef.current.getBoundingClientRect();
 		let clientX, clientY;
 
-		if (event.type === "touchend" && event.changedTouches) {
+		if (event.type === "touchend" && event.changedTouches && event.changedTouches.length > 0) {
 			clientX = event.changedTouches[0].clientX;
 			clientY = event.changedTouches[0].clientY;
-		} else {
+		} else if (event.type === "click") {
 			clientX = event.clientX;
 			clientY = event.clientY;
+		} else {
+			return;
 		}
 
 		pointerRef.current.x = ((clientX - rect.left) / rect.width) * 2 - 1;
@@ -125,19 +127,31 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 
 		// Raycasting para detectar objetos interativos
 		raycasterRef.current.setFromCamera(pointerRef.current, cameraRef.current);
-		const intersects = raycasterRef.current.intersectObjects(interactiveObjectsRef.current, true);
+		const intersects = raycasterRef.current.intersectObjects(sceneRef.current.children, true);
 
 		if (intersects.length > 0) {
-			const clickedObject = intersects[0].object;
-			
-			// Encontrar o objeto pai (modelo completo)
-			let targetObject = clickedObject;
-			while (targetObject.parent && !targetObject.userData.isInteractiveMarker) {
-				targetObject = targetObject.parent;
-			}
-
-			if (targetObject.userData.isInteractiveMarker) {
-				animateFlip(targetObject);
+			// Procurar por objetos interativos nas intersecções
+			for (let i = 0; i < intersects.length; i++) {
+				const intersectedObject = intersects[i].object;
+				
+				// Percorrer a hierarquia para encontrar o marcador
+				let targetObject = intersectedObject;
+				let attempts = 0;
+				
+				while (targetObject && attempts < 10) {
+					if (targetObject.userData && targetObject.userData.isInteractiveMarker) {
+						// Verificar se não está animando
+						if (!animatingObjectsRef.current.has(targetObject)) {
+							animateFlip(targetObject);
+							return;
+						} else {
+							return;
+						}
+					}
+					
+					targetObject = targetObject.parent;
+					attempts++;
+				}
 			}
 		}
 	};
