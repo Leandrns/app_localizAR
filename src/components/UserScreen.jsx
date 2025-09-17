@@ -30,13 +30,14 @@ function UserScreen({
 			setCalirado(true);
 			setShowQRScanner(false);
 
+			setQntdPontos(getQtndPontos(pontoReferencia.qrCode))
+
 			setTimeout(() => {
-				setQntdPontos(getQtndPontos(pontoReferencia.qrCode))
-			}, 5000)
+				alert(
+					`Calibração realizada!\nEvento: ${qrData}\nPontos disponíveis: ${qntdPontos}\nEntre no modo AR para visualizar.`
+				);
+			}, 2000)
 			
-			alert(
-				`Calibração realizada!\nEvento: ${qrData}\nPontos disponíveis: ${qntdPontos}\nEntre no modo AR para visualizar.`
-			);
 
 			setTimeout(() => {
 				setShowAR(true);
