@@ -8,9 +8,6 @@ function UserScreen({
 	setCalirado,
 	pontoReferencia,
 	setPontoReferencia,
-	qntdPontos,
-	setQntdPontos,
-	getQtndPontos,
 	pontos,
 	onGoHome,
 }) {
@@ -29,15 +26,6 @@ function UserScreen({
 			setPontoReferencia(novoPontoReferencia);
 			setCalirado(true);
 			setShowQRScanner(false);
-
-			setQntdPontos(getQtndPontos(pontoReferencia.qrCode))
-
-			setTimeout(() => {
-				alert(
-					`Calibração realizada!\nEvento: ${qrData}\nPontos disponíveis: ${qntdPontos}\nEntre no modo AR para visualizar.`
-				);
-			}, 2000)
-			
 
 			setTimeout(() => {
 				setShowAR(true);
