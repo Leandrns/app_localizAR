@@ -14,7 +14,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	const hitTestSourceRef = useRef(null);
 	const localReferenceSpaceRef = useRef(null);
 	const loaderRef = useRef(new GLTFLoader());
-	const selectableObjectsRef = useRef([]); // objetos que podem ser selecionados (modelos/cubos)
+	const selectableObjectsRef = useRef([]); // objetos que podem ser clicados
 	const raycasterRef = useRef(new THREE.Raycaster());
 	const tempMatrixRef = useRef(new THREE.Matrix4());
 	const flipAnimationsRef = useRef([]); // animações ativas
@@ -138,7 +138,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 
 	// Handler único para select — cria ponto no admin, dispara flip no visitante
 	const onSelect = (event) => {
-		// Se for admin, segue criando pontos (como antes)
+		// Se for admin, cria pontos
 		if (mode === "admin") {
 			if (!calibrado) {
 				alert("Faça a calibração primeiro!");
@@ -176,7 +176,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 					});
 
 					sceneRef.current.add(model);
-					// adiciona ao selectable para consistência (opcional no admin)
+					// adiciona ao selectable para consistência
 					selectableObjectsRef.current.push(model);
 
 					if (onCreatePoint) onCreatePoint(posicaoRelativa);
@@ -207,7 +207,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 
 			const intersects = raycaster.intersectObjects(selectableObjectsRef.current, true);
 			if (intersects.length > 0) {
-				// pegar o objeto raiz (o GLTF scene ou cube)
+				// pegar o objeto
 				let selected = intersects[0].object;
 				let root = selected;
 				while (root.parent && !root.userData?.carregado) {
