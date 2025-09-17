@@ -68,6 +68,9 @@ function App() {
 					setCalirado={setCalirado}
 					pontoReferencia={pontoReferencia}
 					setPontoReferencia={setPontoReferencia}
+					qntdPontos={qntdPontos}
+					setQntdPontos={setQntdPontos}
+					getQtndPontos={getQtndPontos}
 					pontos={pontos}
 					onGoHome={resetSystem}
 				/>

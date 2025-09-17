@@ -8,25 +8,14 @@ function UserScreen({
 	setCalirado,
 	pontoReferencia,
 	setPontoReferencia,
+	qntdPontos,
+	setQntdPontos,
+	getQtndPontos,
 	pontos,
 	onGoHome,
 }) {
 	const [showQRScanner, setShowQRScanner] = useState(false);
 	const [showAR, setShowAR] = useState(false);
-
-	const stats = useMemo(() => {
-		const eventos = [...new Set(pontos.map((p) => p.qrReferencia))];
-		const pontosDoEvento = pontoReferencia
-			? pontos.filter((p) => p.qrReferencia === pontoReferencia.qrCode)
-			: [];
-
-		return {
-			totalPontos: pontos.length,
-			totalEventos: eventos.length,
-			pontosEvento: pontosDoEvento.length,
-			eventoAtual: pontoReferencia ? pontoReferencia.qrCode : "Nenhum",
-		};
-	}, [pontos, pontoReferencia]);
 
 	const handleQRDetected = (qrData) => {
 		if (qrData.length > 3) {
@@ -42,8 +31,11 @@ function UserScreen({
 			setShowQRScanner(false);
 
 			const pontosDoEvento = pontos.filter((p) => p.qrReferencia === qrData);
+			
+			setQntdPontos(getQtndPontos(pontoReferencia.qrCode))
+
 			alert(
-				`Calibração realizada!\nEvento: ${qrData}\nPontos disponíveis: ${pontosDoEvento.length}\nEntre no modo AR para visualizar.`
+				`Calibração realizada!\nEvento: ${qrData}\nPontos disponíveis: ${qntdPontos}\nEntre no modo AR para visualizar.`
 			);
 
 			// Inicializar AR automaticamente
