@@ -95,12 +95,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		renderer.xr.addEventListener("sessionstart", onSessionStart);
 		renderer.xr.addEventListener("sessionend", onSessionEnd);
 		window.addEventListener("resize", onWindowResize);
-		
-		// Adicionar event listeners para interação apenas no modo visitante
-		if (mode === "user") {
-			container.addEventListener("click", onContainerClick);
-			container.addEventListener("touchend", onContainerClick);
-		}
 
 		animate();
 	};
@@ -110,6 +104,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		if (mode !== "user") return;
 		if (!cameraRef.current || !sceneRef.current) return;
 		if (animatingObjectsRef.current.size > 0) return; // Evita cliques durante animações
+		if (!rendererRef.current?.xr?.isPresenting) return; // Só funciona se AR estiver ativo
 
 		event.preventDefault();
 
@@ -247,6 +242,17 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 				}, 1000);
 			}
 		});
+
+		// Adicionar event listeners para interação apenas no modo visitante APÓS o AR iniciar
+		if (mode === "user" && containerRef.current) {
+			// Aguardar um pouco para garantir que o AR está totalmente inicializado
+			setTimeout(() => {
+				if (containerRef.current) {
+					containerRef.current.addEventListener("click", onContainerClick);
+					containerRef.current.addEventListener("touchend", onContainerClick);
+				}
+			}, 1000);
+		}
 	};
 
 	const onSessionEnd = () => {
@@ -255,6 +261,13 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		if (reticleRef.current) {
 			reticleRef.current.visible = false;
 		}
+		
+		// Remover event listeners de interação quando AR termina
+		if (containerRef.current) {
+			containerRef.current.removeEventListener("click", onContainerClick);
+			containerRef.current.removeEventListener("touchend", onContainerClick);
+		}
+		
 		limparObjetosAR();
 	};
 
@@ -532,19 +545,17 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	};
 
 	return (
-		<>
-			<div
-				ref={containerRef}
-				style={{
-					position: "fixed",
-					top: 0,
-					left: 0,
-					width: "100%",
-					height: "100%",
-					zIndex: 1,
-				}}
-			/>
-		</>
+		<div
+			ref={containerRef}
+			style={{
+				position: "fixed",
+				top: 0,
+				left: 0,
+				width: "100%",
+				height: "100%",
+				zIndex: 1,
+			}}
+		/>
 	);
 }
 
