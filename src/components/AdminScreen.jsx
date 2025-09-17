@@ -9,6 +9,9 @@ function AdminScreen({
 	setCalirado,
 	pontoReferencia,
 	setPontoReferencia,
+	qntdPontos,
+	setQntdPontos,
+	getQtndPontos,
 	pontos,
 	updatePontos,
 	onGoHome,
@@ -23,6 +26,8 @@ function AdminScreen({
 				(p) => p.qrReferencia === pontoReferencia.qrCode
 			);
 			setPontosCreated(pontosDoEvento.length);
+
+			setQntdPontos(getQtndPontos(pontoReferencia.qrCode))
 		}
 	}, [pontos, pontoReferencia, calibrado]);
 
@@ -81,14 +86,6 @@ function AdminScreen({
 		}
 	};
 
-	const handleClearAll = () => {
-		if (confirm("Tem certeza que deseja limpar TODOS os pontos salvos?")) {
-			updatePontos([]);
-			setPontosCreated(0);
-			alert("Todos os pontos foram removidos!");
-		}
-	};
-
 	const generateId = () => {
 		return Date.now().toString(36) + Math.random().toString(36);
 	};
@@ -101,19 +98,6 @@ function AdminScreen({
 			/>
 		);
 	}
-
-// 	if (showAR && calibrado) {
-//     return (
-//         <ARView
-//             mode="admin"
-//             calibrado={calibrado}
-//             pontoReferencia={pontoReferencia}
-//             pontos={pontos}
-//             onCreatePoint={handleCreatePoint}
-// 			onExit={() => setShowAR(false)}
-//         />
-//     );
-// }
 
 return (
     <div className="admin-container">
@@ -153,7 +137,7 @@ return (
                         </div>
                         <div className="info-item">
                             <span>Pontos Criados</span>
-                            {pontosCreated}
+                            {qntdPontos}
                         </div>
                     </div>
                     
@@ -165,10 +149,6 @@ return (
                         <button className="botao btn-recalibrar" onClick={() => setShowQRScanner(true)}>
                             <i className="fa-solid fa-rotate-right"></i> Recalibrar
                         </button>
-						
-                        {/* <button className="botao btn-iniciar" onClick={() => setShowAR(true)}>
-                           <i class="fa-solid fa-vr-cardboard"></i> Iniciar AR
-                        </button> */}
                     </div> 
                 </section>
             )}

@@ -1,16 +1,4 @@
-import { useMemo } from 'react'
-
 function HomeScreen({ pontos, onModeChange }) {
-  const stats = useMemo(() => {
-    if (!pontos || pontos.length === 0) {
-      return {
-        totalPontos: 0,
-        totalEventos: 0,
-        message: 'Nenhum ponto salvo ainda'
-      }
-    }
-  }, [pontos])
-
   return (
     <div id="home-screen">
       <img src="/logoprojeto.png" alt='Logo LocalizAR' id='imagem'></img>
