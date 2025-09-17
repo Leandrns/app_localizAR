@@ -217,13 +217,13 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 				if (!root.userData) root = selected;
 
 				// Iniciar animação de flip (rotaciona em X)
-				startFlipAnimation(root, { axis: "x", degree: Math.PI, duration: 600 });
+				startFlipAnimation(root, { axis: "y", degree: (2*Math.PI), duration: 600 });
 			}
 		}
 	};
 
 	// inicia animação de flip: axis = 'x'|'y'|'z', degree em radianos, duration em ms
-	const startFlipAnimation = (object3D, { axis = "z", degree = Math.PI, duration = 600 } = {}) => {
+	const startFlipAnimation = (object3D, { axis = "y", degree = Math.PI, duration = 600 } = {}) => {
 		if (!object3D) return;
 		const start = object3D.rotation[axis];
 		const target = start + degree;
