@@ -223,7 +223,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	};
 
 	// inicia animação de flip: axis = 'x'|'y'|'z', degree em radianos, duration em ms
-	const startFlipAnimation = (object3D, { axis = "y", degree = 2 * Math.PI, duration = 600 } = {}) => {
+	const startFlipAnimation = (object3D, { axis = "z", degree = Math.PI, duration = 600 } = {}) => {
 		if (!object3D) return;
 		const start = object3D.rotation[axis];
 		const target = start + degree;
