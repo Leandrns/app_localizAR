@@ -21,8 +21,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	const lastTimestampRef = useRef(0);
 
 	useEffect(() => {
-		carregarPontosSalvos();
-
 		if (calibrado && containerRef.current) {
 			initAR();
 		}
@@ -30,7 +28,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		return () => {
 			cleanup();
 		};
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [calibrado, mode]);
 
 	const initAR = () => {
@@ -226,7 +223,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	};
 
 	// inicia animação de flip: axis = 'x'|'y'|'z', degree em radianos, duration em ms
-	const startFlipAnimation = (object3D, { axis = "x", degree = Math.PI, duration = 600 } = {}) => {
+	const startFlipAnimation = (object3D, { axis = "y", degree = 2 * Math.PI, duration = 600 } = {}) => {
 		if (!object3D) return;
 		const start = object3D.rotation[axis];
 		const target = start + degree;
