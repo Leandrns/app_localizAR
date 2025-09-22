@@ -210,24 +210,59 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 
 	// Handler para select (criar ponto no admin)
 	const onSelect = () => {
-		if (mode !== "admin") return;
-		if (showNameModal) return; // ✅ Não criar se modal estiver aberto
-		if (!calibrado) {
-			alert("Faça a calibração primeiro!");
-			return;
-		}
-		if (!reticleRef.current || !reticleRef.current.visible) return;
+    if (mode !== "admin") return;
+    if (!calibrado) {
+        alert("Faça a calibração primeiro!");
+        return;
+    }
+    if (!reticleRef.current || !reticleRef.current.visible) return;
 
-		// Pegar posição do retículo
-		const position = new THREE.Vector3();
-		position.setFromMatrixPosition(reticleRef.current.matrix);
-		const posicaoRelativa = calcularPosicaoRelativa(position);
+    const position = new THREE.Vector3();
+    position.setFromMatrixPosition(reticleRef.current.matrix);
+    const posicaoRelativa = calcularPosicaoRelativa(position);
 
-		// ✅ Armazenar posição e mostrar modal
-		setPendingPoint({ position, posicaoRelativa });
-		setShowNameModal(true);
-		setPointName('');
-	};
+    // Solicitar nome imediatamente
+    const nomeDoPonto = prompt("Digite o nome do marcador:");
+    if (!nomeDoPonto || !nomeDoPonto.trim()) return;
+
+    // Criar modelo 3D com nome
+    loaderRef.current.load(
+        "/map_pointer_3d_icon.glb",
+        (gltf) => {
+            const model = gltf.scene;
+            model.position.copy(position);
+            model.position.y += 1;
+            model.scale.set(0.1, 0.1, 0.1);
+
+            model.userData = {
+                carregado: true,
+                dadosOriginais: posicaoRelativa,
+                nome: nomeDoPonto.trim()
+            };
+
+            const cor = new THREE.Color().setHSL(Math.random(), 0.7, 0.5);
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    if (child.material) child.material = child.material.clone();
+                    child.material.color = cor;
+                }
+            });
+
+            sceneRef.current.add(model);
+            selectableObjectsRef.current.push(model);
+
+            // Salvar no Supabase
+            if (onCreatePoint) {
+                onCreatePoint({ ...posicaoRelativa, nome: nomeDoPonto.trim() });
+            }
+        },
+        undefined,
+        (error) => {
+            console.error("Erro ao carregar modelo:", error);
+        }
+    );
+};
+
 
 	// ✅ CORRIGIDO: Função de animação de rotação
 	const startFlipAnimation = (object3D, { axis = "z", degree = Math.PI, duration = 600 } = {}) => {
@@ -293,10 +328,9 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 				.select("*")
 				.eq("qr_referencia", pontoReferencia.qrCode);
 
-			// Se há filtro ativo e não é "todos", filtrar por nome
-			if (filtroAtivo && filtroAtivo !== 'todos') {
+				if (filtroAtivo && filtroAtivo !== 'todos') {
 				query = query.eq("nome", filtroAtivo);
-			}
+				}
 
 			const { data, error } = await query;
 
