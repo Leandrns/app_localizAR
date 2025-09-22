@@ -3,7 +3,7 @@ import HomeScreen from "./components/HomeScreen";
 import AdminScreen from "./components/AdminScreen";
 import UserScreen from "./components/UserScreen";
 import { useLocalStorage } from "./hooks/useLocalStorage";
-import { supabase } from '../supabaseClient'
+import { supabase } from './supabaseClient'
 import "./App.css";
 
 function App() {
@@ -68,6 +68,9 @@ function App() {
 					setCalirado={setCalirado}
 					pontoReferencia={pontoReferencia}
 					setPontoReferencia={setPontoReferencia}
+					qntdPontos={qntdPontos}
+					setQntdPontos={setQntdPontos}
+					getQtndPontos={getQtndPontos}
 					pontos={pontos}
 					onGoHome={resetSystem}
 				/>
