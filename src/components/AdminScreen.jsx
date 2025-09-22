@@ -1,20 +1,17 @@
 import { useState, useEffect } from "react";
 import QRScanner from "./QRScanner";
 import ARView from "./ARView";
-import { createClient } from "@supabase/supabase-js";
 import "../styles/admin.css";
-
-
-const supabase = createClient(
-	import.meta.env.VITE_SUPABASE_URL,
-	import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import { supabase } from '../supabaseClient'
 
 function AdminScreen({
 	calibrado,
 	setCalirado,
 	pontoReferencia,
 	setPontoReferencia,
+	qntdPontos,
+	setQntdPontos,
+	getQtndPontos,
 	pontos,
 	updatePontos,
 	onGoHome,
@@ -29,6 +26,8 @@ function AdminScreen({
 				(p) => p.qrReferencia === pontoReferencia.qrCode
 			);
 			setPontosCreated(pontosDoEvento.length);
+
+			setQntdPontos(getQtndPontos(pontoReferencia.qrCode))
 		}
 	}, [pontos, pontoReferencia, calibrado]);
 
@@ -58,40 +57,34 @@ function AdminScreen({
 		}
 	};
 
-	const handleCreatePoint = async (posicaoRelativa) => {
+	const handleCreatePoint = async (posicaoRelativaComNome) => {
 		const novoPonto = {
 			id: generateId(),
-			posicaoRelativa: posicaoRelativa,
+			posicaoRelativa: posicaoRelativaComNome,
 			qrReferencia: pontoReferencia.qrCode,
 			timestamp: Date.now(),
 			criadoPor: "admin",
+			nome: posicaoRelativaComNome.nome || 'Sem nome'
 		};
 
 		updatePontos(novoPonto);
 		setPontosCreated((prev) => prev + 1);
 
-		// Salva no Supabase
+		// Salva no Supabase com o nome
 		const { error } = await supabase.from("pontos").insert({
 			id: novoPonto.id,
-			pos_x: posicaoRelativa.x,
-			pos_y: posicaoRelativa.y,
-			pos_z: posicaoRelativa.z,
+			pos_x: posicaoRelativaComNome.x,
+			pos_y: posicaoRelativaComNome.y,
+			pos_z: posicaoRelativaComNome.z,
 			qr_referencia: novoPonto.qrReferencia,
 			created_by: novoPonto.criadoPor,
+			nome: posicaoRelativaComNome.nome || 'Sem nome'
 		});
 
 		if (error) {
 			console.error("Erro ao salvar ponto no Supabase:", error.message);
 		} else {
-			console.log("✅ Ponto salvo no Supabase");
-		}
-	};
-
-	const handleClearAll = () => {
-		if (confirm("Tem certeza que deseja limpar TODOS os pontos salvos?")) {
-			updatePontos([]);
-			setPontosCreated(0);
-			alert("Todos os pontos foram removidos!");
+			console.log("✅ Ponto salvo no Supabase com nome:", posicaoRelativaComNome.nome);
 		}
 	};
 
@@ -108,26 +101,13 @@ function AdminScreen({
 		);
 	}
 
-// 	if (showAR && calibrado) {
-//     return (
-//         <ARView
-//             mode="admin"
-//             calibrado={calibrado}
-//             pontoReferencia={pontoReferencia}
-//             pontos={pontos}
-//             onCreatePoint={handleCreatePoint}
-// 			onExit={() => setShowAR(false)}
-//         />
-//     );
-// }
-
 return (
     <div className="admin-container">
         <main className="admin-card">
             <header className="admin-card-header">
-                <h2><i class="fa-solid fa-wrench"></i> Modo Administrador</h2>
+                <h2><i className="fa-solid fa-wrench"></i> Modo Administrador</h2>
                 <button className="btn-icon" onClick={onGoHome} title="Voltar">
-                    ←
+                    <i className="fa-solid fa-arrow-left"></i> Voltar
                 </button>
             </header>
 
@@ -135,12 +115,12 @@ return (
                 //NÃO CALIBRADO
                 <section className="admin-card-body calibration-needed">
                     <div className="status-badge nao-calibrado">
-                        <i class="fa-solid fa-x"></i> Calibração Necessária
+                        <i className="fa-solid fa-qrcode"></i> Calibração Necessária
                     </div>
                     <p className="instructions">
                         Para começar, aponte a câmera para o QR Code do evento para calibrar a posição.
                     </p>
-                    <button className="btn-calibrar" onClick={() => setShowQRScanner(true)}>
+                    <button className="btn-calibrar-admin" onClick={() => setShowQRScanner(true)}>
                         Calibrar com QR Code
                     </button>
                 </section>
@@ -149,7 +129,7 @@ return (
 				// CALIBRADO
                 <section className="admin-card-body calibration-done">
                     <div className="status-badge calibrado">
-                        <i class="fa-solid fa-check"></i> Sistema Calibrado
+                        <i className="fa-solid fa-check"></i> Sistema Calibrado
                     </div>
 
                     <div className="info-group">
@@ -159,22 +139,22 @@ return (
                         </div>
                         <div className="info-item">
                             <span>Pontos Criados</span>
-                            {pontosCreated}
+                            {qntdPontos}
                         </div>
                     </div>
                     
                     <p className="instructions">
                         Tudo pronto! Clique no botão Start AR para entrar no modo de Realidade Aumentada.
+                        <br /><br />
+                        <small style={{ color: '#aaa' }}>
+                            💡 Ao tocar na superfície, você poderá dar um nome para cada marcador.
+                        </small>
                     </p>
 
                     <div className="action-buttons">
                         <button className="botao btn-recalibrar" onClick={() => setShowQRScanner(true)}>
-                            <i class="fa-solid fa-rotate-right"></i> Recalibrar
+                            <i className="fa-solid fa-rotate-right"></i> Recalibrar
                         </button>
-						
-                        {/* <button className="botao btn-iniciar" onClick={() => setShowAR(true)}>
-                           <i class="fa-solid fa-vr-cardboard"></i> Iniciar AR
-                        </button> */}
                     </div> 
                 </section>
             )}

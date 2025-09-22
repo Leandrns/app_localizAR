@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useCallback } from "react";
 import QRScanner from "./QRScanner";
 import ARView from "./ARView";
+import MarkerFilter from "./MarkerFilter";
 import "../styles/user.css";
 
 function UserScreen({
@@ -13,20 +14,13 @@ function UserScreen({
 }) {
 	const [showQRScanner, setShowQRScanner] = useState(false);
 	const [showAR, setShowAR] = useState(false);
+	const [filteredMarkers, setFilteredMarkers] = useState([]);
+	const [showMarkerFilter, setShowMarkerFilter] = useState(false);
 
-	const stats = useMemo(() => {
-		const eventos = [...new Set(pontos.map((p) => p.qrReferencia))];
-		const pontosDoEvento = pontoReferencia
-			? pontos.filter((p) => p.qrReferencia === pontoReferencia.qrCode)
-			: [];
-
-		return {
-			totalPontos: pontos.length,
-			totalEventos: eventos.length,
-			pontosEvento: pontosDoEvento.length,
-			eventoAtual: pontoReferencia ? pontoReferencia.qrCode : "Nenhum",
-		};
-	}, [pontos, pontoReferencia]);
+	// Callback para atualizar filtros
+	const handleFilterChange = useCallback((selectedMarkers) => {
+		setFilteredMarkers(selectedMarkers);
+	}, []);
 
 	const handleQRDetected = (qrData) => {
 		if (qrData.length > 3) {
@@ -41,12 +35,6 @@ function UserScreen({
 			setCalirado(true);
 			setShowQRScanner(false);
 
-			const pontosDoEvento = pontos.filter((p) => p.qrReferencia === qrData);
-			alert(
-				`Calibração realizada!\nEvento: ${qrData}\nPontos disponíveis: ${pontosDoEvento.length}\nEntre no modo AR para visualizar.`
-			);
-
-			// Inicializar AR automaticamente
 			setTimeout(() => {
 				setShowAR(true);
 			}, 500);
@@ -70,7 +58,7 @@ function UserScreen({
             <header className="user-card-header">
                 <h2><i className="fa-solid fa-map-marker-alt"></i> Modo Visitante</h2>
                 <button className="btn-icon" onClick={onGoHome} title="Voltar">
-                    ←
+                    <i className="fa-solid fa-arrow-left"></i> Voltar
                 </button>
             </header>
 
@@ -83,7 +71,7 @@ function UserScreen({
                     <p className="instructions">
                         Para começar, aponte a câmera para o QR Code do evento para calibrar sua posição.
                     </p>
-                    <button className="botao btn-calibrar" onClick={() => setShowQRScanner(true)}>
+                    <button className="botao btn-calibrar-user" onClick={() => setShowQRScanner(true)}>
                         Calibrar com QR Code
                     </button>
                 </section>
@@ -98,41 +86,61 @@ function UserScreen({
                     <div className="info-group">
                         <div className="info-item">
                             <span>Bem-vindo(a) ao evento</span>
-                            {pontoReferencia.qrCode}
+                            <strong>{pontoReferencia.qrCode}</strong>
                         </div>
                     </div>
                     
                     <p className="instructions">
                         Tudo pronto! Clique no botão abaixo para entrar no modo de Realidade Aumentada.
+                        <br /><br />
+                        <small style={{ color: '#4ecdc4' }}>
+                            💡 Use o filtro <i className="fa-solid fa-filter"></i> para escolher quais marcadores visualizar.
+                        </small>
                     </p>
 
                     <div className="action-buttons">
                         <button className="botao btn-recalibrar" onClick={() => setShowQRScanner(true)}>
                             <i className="fa-solid fa-rotate-right"></i> Recalibrar
-                        </button> 
+                        </button>
+                        
+                        {showAR && (
+                            <button 
+                                className="botao btn-filtro" 
+                                onClick={() => setShowMarkerFilter(!showMarkerFilter)}
+                                style={{
+                                    backgroundColor: showMarkerFilter ? '#4ecdc4' : 'transparent',
+                                    color: showMarkerFilter ? '#1e1e1e' : '#4ecdc4'
+                                }}
+                            >
+                                <i className="fa-solid fa-filter"></i> Filtros
+                            </button>
+                        )}
 					</div>
                 </section>
             )}
-			</main>
-			{/* <div id="user-stats">
-				<strong>📊 Estatísticas</strong>
-				<br />
-				<div>Pontos disponíveis: {stats.totalPontos}</div>
-				<div>Eventos: {stats.totalEventos}</div>
-				<div>Evento atual: {stats.eventoAtual}</div>
-			</div>
-			*/}
+		</main>
 
-			{showAR && calibrado && (
-				<ARView
-					mode="user"
-					calibrado={calibrado}
-					pontoReferencia={pontoReferencia}
-					pontos={pontos}
-				/>
-			)} 
-		</div>
-			
+		{/* Filtro de Marcadores */}
+		{showAR && calibrado && pontoReferencia && (
+			<MarkerFilter
+				pontoReferencia={pontoReferencia}
+				onFilterChange={handleFilterChange}
+				isVisible={showMarkerFilter}
+				onToggleVisibility={() => setShowMarkerFilter(!showMarkerFilter)}
+			/>
+		)}
+
+		{/* AR View */}
+		{showAR && calibrado && (
+			<ARView
+				mode="user"
+				calibrado={calibrado}
+				pontoReferencia={pontoReferencia}
+				pontos={pontos}
+				filteredMarkers={filteredMarkers}
+			/>
+		)} 
+	</div>
 	);
 }
 

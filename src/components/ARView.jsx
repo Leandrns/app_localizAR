@@ -1,15 +1,10 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import * as THREE from "three";
 import { ARButton } from "three/examples/jsm/webxr/ARButton.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from '../supabaseClient'
 
-const supabase = createClient(
-	import.meta.env.VITE_SUPABASE_URL,
-  	import.meta.env.VITE_SUPABASE_ANON_KEY
-);
-
-function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
+function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filteredMarkers = [] }) {
 	const containerRef = useRef(null);
 	const sceneRef = useRef(null);
 	const rendererRef = useRef(null);
@@ -19,10 +14,18 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	const hitTestSourceRef = useRef(null);
 	const localReferenceSpaceRef = useRef(null);
 	const loaderRef = useRef(new GLTFLoader());
+	const selectableObjectsRef = useRef([]); // objetos que podem ser clicados
+	const raycasterRef = useRef(new THREE.Raycaster());
+	const tempMatrixRef = useRef(new THREE.Matrix4());
+	const flipAnimationsRef = useRef([]); // animações ativas
+	const lastTimestampRef = useRef(0);
+
+	// Estado para modal de nome do marcador
+	const [showNameModal, setShowNameModal] = useState(false);
+	const [pendingPosition, setPendingPosition] = useState(null);
+	const [markerName, setMarkerName] = useState('');
 
 	useEffect(() => {
-		carregarPontosSalvos();
-
 		if (calibrado && containerRef.current) {
 			initAR();
 		}
@@ -30,7 +33,18 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		return () => {
 			cleanup();
 		};
-	}, [calibrado]);
+	}, [calibrado, mode]);
+
+	// Recarregar pontos quando filtros mudarem (modo visitante)
+	useEffect(() => {
+		if (mode === "user" && calibrado && pontoReferencia) {
+			// Limpar objetos atuais e recarregar com filtros
+			limparObjetosAR();
+			setTimeout(() => {
+				carregarPontosSalvos();
+			}, 500);
+		}
+	}, [filteredMarkers, calibrado, pontoReferencia, mode]);
 
 	const initAR = () => {
 		const container = containerRef.current;
@@ -84,7 +98,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 			scene.add(reticle);
 		}
 
-		// Controller
+		// Controller - um único handler que faz ações diferentes conforme mode
 		const controller = renderer.xr.getController(0);
 		controller.addEventListener("select", onSelect);
 		controllerRef.current = controller;
@@ -133,21 +147,74 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 			reticleRef.current.visible = false;
 		}
 		limparObjetosAR();
+		flipAnimationsRef.current = [];
+		lastTimestampRef.current = 0;
+		selectableObjectsRef.current = [];
 	};
 
-	const onSelect = () => {
-		if (mode !== "admin") return;
-		if (!calibrado) {
-			alert("Faça a calibração primeiro!");
+	// Handler único para select — cria ponto no admin, dispara flip no visitante
+	const onSelect = (event) => {
+		// Se for admin, cria pontos
+		if (mode === "admin") {
+			if (!calibrado) {
+				alert("Faça a calibração primeiro!");
+				return;
+			}
+			if (!reticleRef.current || !reticleRef.current.visible) return;
+
+			// Pega posição do retículo
+			const position = new THREE.Vector3();
+			position.setFromMatrixPosition(reticleRef.current.matrix);
+
+			const posicaoRelativa = calcularPosicaoRelativa(position);
+
+			// Salvar posição e mostrar modal
+			setPendingPosition({ position, posicaoRelativa });
+			setShowNameModal(true);
 			return;
 		}
-		if (!reticleRef.current || !reticleRef.current.visible) return;
 
-		// Pega posição do retículo
-		const position = new THREE.Vector3();
-		position.setFromMatrixPosition(reticleRef.current.matrix);
+		// Modo visitante: detectar interseção com objetos carregados e iniciar flip
+		if (mode === "user") {
+			const controller = controllerRef.current;
+			const scene = sceneRef.current;
+			if (!controller || !scene) return;
 
-		const posicaoRelativa = calcularPosicaoRelativa(position);
+			// Raycast a partir do controller
+			const raycaster = raycasterRef.current;
+			const tempMatrix = tempMatrixRef.current;
+			tempMatrix.identity().extractRotation(controller.matrixWorld);
+
+			raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+			raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+
+			const intersects = raycaster.intersectObjects(selectableObjectsRef.current, true);
+			if (intersects.length > 0) {
+				// pegar o objeto
+				let selected = intersects[0].object;
+				let root = selected;
+				while (root.parent && !root.userData?.carregado) {
+					root = root.parent;
+				}
+				// se root não tiver flag, usar selected
+				if (!root.userData) root = selected;
+
+				// Iniciar animação de flip (rotaciona em X)
+				startFlipAnimation(root, { axis: "y", degree: (2*Math.PI), duration: 600 });
+			}
+		}
+	};
+
+	// Função para confirmar criação do marcador com nome
+	const handleConfirmMarker = async () => {
+		if (!markerName.trim()) {
+			alert("Por favor, insira um nome para o marcador!");
+			return;
+		}
+
+		if (!pendingPosition) return;
+
+		const { position, posicaoRelativa } = pendingPosition;
 
 		// Carrega modelo 3D
 		loaderRef.current.load(
@@ -161,30 +228,59 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 				model.userData = {
 					carregado: true,
 					dadosOriginais: posicaoRelativa,
+					nome: markerName.trim()
 				};
 
 				// Cor aleatória
 				const cor = new THREE.Color().setHSL(Math.random(), 0.7, 0.5);
 				model.traverse((child) => {
 					if (child.isMesh) {
+						if (child.material) child.material = child.material.clone();
 						child.material.color = cor;
 					}
 				});
 
 				sceneRef.current.add(model);
+				// adiciona ao selectable para consistência
+				selectableObjectsRef.current.push(model);
 
-				onCreatePoint(posicaoRelativa);
+				if (onCreatePoint) onCreatePoint({...posicaoRelativa, nome: markerName.trim()});
 			},
 			undefined,
 			(error) => {
 				console.error("Erro ao carregar modelo:", error);
 				// Fallback para cubo simples
-				criarCuboFallback(position, posicaoRelativa);
+				criarCuboFallback(position, posicaoRelativa, markerName.trim());
 			}
 		);
+
+		// Fechar modal e limpar estado
+		setShowNameModal(false);
+		setPendingPosition(null);
+		setMarkerName('');
 	};
 
-	const criarCuboFallback = (position, posicaoRelativa) => {
+	// inicia animação de flip: axis = 'x'|'y'|'z', degree em radianos, duration em ms
+	const startFlipAnimation = (object3D, { axis = "y", degree = Math.PI, duration = 600 } = {}) => {
+		if (!object3D) return;
+		const start = object3D.rotation[axis];
+		const target = start + degree;
+		flipAnimationsRef.current.push({
+			object: object3D,
+			axis,
+			start,
+			target,
+			elapsed: 0,
+			duration,
+		});
+	};
+
+	// easing (easeOutQuad)
+	const easeOutQuad = (t) => {
+		return t * (2 - t);
+	};
+
+	const criarCuboFallback = (position, posicaoRelativa, nome) => {
 		const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
 		const material = new THREE.MeshLambertMaterial({
 			color: new THREE.Color().setHSL(Math.random(), 0.7, 0.5),
@@ -193,10 +289,17 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		cube.position.copy(position);
 		cube.position.y += 0.05;
 
+		cube.userData = {
+			carregado: true,
+			dadosOriginais: posicaoRelativa,
+			nome: nome
+		};
+
 		sceneRef.current.add(cube);
+		selectableObjectsRef.current.push(cube);
 
 		if (onCreatePoint) {
-			onCreatePoint(posicaoRelativa);
+			onCreatePoint({...posicaoRelativa, nome});
 		}
 	};
 
@@ -205,11 +308,17 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		if (!calibrado || !pontoReferencia) return;
 
 		try {
-			// Buscar pontos do Supabase
-			const { data, error } = await supabase
+			let query = supabase
 				.from("pontos")
 				.select("*")
 				.eq("qr_referencia", pontoReferencia.qrCode);
+
+			// Aplicar filtros no modo visitante
+			if (mode === "user" && filteredMarkers.length > 0) {
+				query = query.in("nome", filteredMarkers);
+			}
+
+			const { data, error } = await query;
 
 			if (error) {
 				console.error("Erro ao carregar pontos do Supabase:", error.message);
@@ -248,17 +357,21 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 				model.userData = {
 					carregado: true,
 					dadosOriginais: dadosPonto,
+					nome: dadosPonto.nome || `Marcador ${index + 1}`
 				};
 
 				const cor = new THREE.Color().setHSL(Math.random(), 0.7, 0.5);
 
 				model.traverse((child) => {
 					if (child.isMesh) {
+						if (child.material) child.material = child.material.clone();
 						child.material.color = cor;
 					}
 				});
 
 				sceneRef.current.add(model);
+				// adiciona ao array de selecionáveis
+				selectableObjectsRef.current.push(model);
 			},
 			undefined,
 			(error) => {
@@ -284,9 +397,11 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		cube.userData = {
 			carregado: true,
 			dadosOriginais: dadosPonto,
+			nome: dadosPonto.nome || `Marcador ${index + 1}`
 		};
 
 		sceneRef.current.add(cube);
+		selectableObjectsRef.current.push(cube);
 	};
 
 	const calcularPosicaoRelativa = (posicaoAR) => {
@@ -310,10 +425,21 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		});
 
 		objetosParaRemover.forEach((obj) => {
-			sceneRef.current.remove(obj);
+			if (obj.parent) obj.parent.remove(obj);
 			if (obj.geometry) obj.geometry.dispose();
-			if (obj.material) obj.material.dispose();
+			if (obj.material) {
+				// materiais podem ser arrays ou objetos
+				if (Array.isArray(obj.material)) {
+					obj.material.forEach((m) => m.dispose && m.dispose());
+				} else {
+					obj.material.dispose && obj.material.dispose();
+				}
+			}
 		});
+
+		// limpar arrays auxiliares
+		selectableObjectsRef.current = [];
+		flipAnimationsRef.current = [];
 	};
 
 	const onWindowResize = () => {
@@ -342,6 +468,12 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		const hitTestSource = hitTestSourceRef.current;
 		const localReferenceSpace = localReferenceSpaceRef.current;
 
+		// calcular delta time (ms)
+		const last = lastTimestampRef.current || timestamp;
+		const deltaMs = timestamp - last;
+		lastTimestampRef.current = timestamp;
+
+		// Atualizar hit-test / reticle
 		if (frame && hitTestSource && localReferenceSpace) {
 			const hitTestResults = frame.getHitTestResults(hitTestSource);
 
@@ -363,6 +495,28 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 			}
 		}
 
+		// Atualizar animações de flip (se houver)
+		if (flipAnimationsRef.current.length > 0) {
+			// iterar e atualizar
+			const toRemove = [];
+			flipAnimationsRef.current.forEach((anim, idx) => {
+				anim.elapsed += deltaMs;
+				const t = Math.min(anim.elapsed / anim.duration, 1);
+				const eased = easeOutQuad(t);
+				const newRot = anim.start + (anim.target - anim.start) * eased;
+				if (anim.object && anim.object.rotation) {
+					anim.object.rotation[anim.axis] = newRot;
+				}
+				if (t >= 1) {
+					toRemove.push(idx);
+				}
+			});
+			// remover do final para não bagunçar índices
+			for (let i = toRemove.length - 1; i >= 0; i--) {
+				flipAnimationsRef.current.splice(toRemove[i], 1);
+			}
+		}
+
 		if (renderer && scene && camera) {
 			renderer.render(scene, camera);
 		}
@@ -372,7 +526,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		if (rendererRef.current) {
 			rendererRef.current.setAnimationLoop(null);
 
-			if (rendererRef.current.xr.getSession()) {
+			if (rendererRef.current.xr.getSession && rendererRef.current.xr.getSession()) {
 				rendererRef.current.xr.getSession().end();
 			}
 		}
@@ -387,17 +541,104 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	};
 
 	return (
-		<div
-			ref={containerRef}
-			style={{
-				position: "fixed",
-				top: 0,
-				left: 0,
-				width: "100%",
-				height: "100%",
-				zIndex: 1,
-			}}
-		/>
+		<>
+			<div
+				ref={containerRef}
+				style={{
+					position: "fixed",
+					top: 0,
+					left: 0,
+					width: "100%",
+					height: "100%",
+					zIndex: 1,
+				}}
+			/>
+
+			{/* Modal para Nome do Marcador (Admin) */}
+			{showNameModal && (
+				<div style={{
+					position: 'fixed',
+					top: 0,
+					left: 0,
+					width: '100%',
+					height: '100%',
+					backgroundColor: 'rgba(0, 0, 0, 0.8)',
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+					zIndex: 1000
+				}}>
+					<div style={{
+						backgroundColor: '#1e1e1e',
+						padding: '2rem',
+						borderRadius: '12px',
+						border: '1px solid rgba(255, 255, 255, 0.1)',
+						minWidth: '300px',
+						maxWidth: '400px'
+					}}>
+						<h3 style={{ color: '#fff', marginBottom: '1rem', textAlign: 'center' }}>
+							Nome do Marcador
+						</h3>
+						<input
+							type="text"
+							value={markerName}
+							onChange={(e) => setMarkerName(e.target.value)}
+							placeholder="Digite o nome do marcador..."
+							style={{
+								width: '100%',
+								padding: '0.75rem',
+								border: '1px solid #444',
+								borderRadius: '8px',
+								backgroundColor: '#2a2a2a',
+								color: '#fff',
+								fontSize: '1rem',
+								marginBottom: '1.5rem'
+							}}
+							onKeyPress={(e) => {
+								if (e.key === 'Enter') {
+									handleConfirmMarker();
+								}
+							}}
+							autoFocus
+						/>
+						<div style={{ display: 'flex', gap: '1rem' }}>
+							<button
+								onClick={() => {
+									setShowNameModal(false);
+									setPendingPosition(null);
+									setMarkerName('');
+								}}
+								style={{
+									flex: 1,
+									padding: '0.75rem',
+									border: '2px solid #666',
+									borderRadius: '8px',
+									backgroundColor: 'transparent',
+									color: '#fff',
+									cursor: 'pointer'
+								}}
+							>
+								Cancelar
+							</button>
+							<button
+								onClick={handleConfirmMarker}
+								style={{
+									flex: 1,
+									padding: '0.75rem',
+									border: '2px solid #05d545',
+									borderRadius: '8px',
+									backgroundColor: 'transparent',
+									color: '#05d545',
+									cursor: 'pointer'
+								}}
+							>
+								Confirmar
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+		</>
 	);
 }
 
