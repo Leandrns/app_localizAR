@@ -1,17 +1,20 @@
 import { useState, useEffect } from "react";
 import QRScanner from "./QRScanner";
 import ARView from "./ARView";
+import { createClient } from "@supabase/supabase-js";
 import "../styles/admin.css";
-import { supabase } from '../supabaseClient'
+
+
+const supabase = createClient(
+	import.meta.env.VITE_SUPABASE_URL,
+	import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 function AdminScreen({
 	calibrado,
 	setCalirado,
 	pontoReferencia,
 	setPontoReferencia,
-	qntdPontos,
-	setQntdPontos,
-	getQtndPontos,
 	pontos,
 	updatePontos,
 	onGoHome,
@@ -26,8 +29,6 @@ function AdminScreen({
 				(p) => p.qrReferencia === pontoReferencia.qrCode
 			);
 			setPontosCreated(pontosDoEvento.length);
-
-			setQntdPontos(getQtndPontos(pontoReferencia.qrCode))
 		}
 	}, [pontos, pontoReferencia, calibrado]);
 
@@ -86,6 +87,14 @@ function AdminScreen({
 		}
 	};
 
+	const handleClearAll = () => {
+		if (confirm("Tem certeza que deseja limpar TODOS os pontos salvos?")) {
+			updatePontos([]);
+			setPontosCreated(0);
+			alert("Todos os pontos foram removidos!");
+		}
+	};
+
 	const generateId = () => {
 		return Date.now().toString(36) + Math.random().toString(36);
 	};
@@ -99,13 +108,26 @@ function AdminScreen({
 		);
 	}
 
+// 	if (showAR && calibrado) {
+//     return (
+//         <ARView
+//             mode="admin"
+//             calibrado={calibrado}
+//             pontoReferencia={pontoReferencia}
+//             pontos={pontos}
+//             onCreatePoint={handleCreatePoint}
+// 			onExit={() => setShowAR(false)}
+//         />
+//     );
+// }
+
 return (
     <div className="admin-container">
         <main className="admin-card">
             <header className="admin-card-header">
-                <h2><i className="fa-solid fa-wrench"></i> Modo Administrador</h2>
+                <h2><i class="fa-solid fa-wrench"></i> Modo Administrador</h2>
                 <button className="btn-icon" onClick={onGoHome} title="Voltar">
-                    <i className="fa-solid fa-arrow-left"></i> Voltar
+                    ←
                 </button>
             </header>
 
@@ -113,12 +135,12 @@ return (
                 //NÃO CALIBRADO
                 <section className="admin-card-body calibration-needed">
                     <div className="status-badge nao-calibrado">
-                        <i className="fa-solid fa-qrcode"></i> Calibração Necessária
+                        <i class="fa-solid fa-x"></i> Calibração Necessária
                     </div>
                     <p className="instructions">
                         Para começar, aponte a câmera para o QR Code do evento para calibrar a posição.
                     </p>
-                    <button className="btn-calibrar-admin" onClick={() => setShowQRScanner(true)}>
+                    <button className="btn-calibrar" onClick={() => setShowQRScanner(true)}>
                         Calibrar com QR Code
                     </button>
                 </section>
@@ -127,7 +149,7 @@ return (
 				// CALIBRADO
                 <section className="admin-card-body calibration-done">
                     <div className="status-badge calibrado">
-                        <i className="fa-solid fa-check"></i> Sistema Calibrado
+                        <i class="fa-solid fa-check"></i> Sistema Calibrado
                     </div>
 
                     <div className="info-group">
@@ -137,7 +159,7 @@ return (
                         </div>
                         <div className="info-item">
                             <span>Pontos Criados</span>
-                            {qntdPontos}
+                            {pontosCreated}
                         </div>
                     </div>
                     
@@ -147,8 +169,12 @@ return (
 
                     <div className="action-buttons">
                         <button className="botao btn-recalibrar" onClick={() => setShowQRScanner(true)}>
-                            <i className="fa-solid fa-rotate-right"></i> Recalibrar
+                            <i class="fa-solid fa-rotate-right"></i> Recalibrar
                         </button>
+						
+                        {/* <button className="botao btn-iniciar" onClick={() => setShowAR(true)}>
+                           <i class="fa-solid fa-vr-cardboard"></i> Iniciar AR
+                        </button> */}
                     </div> 
                 </section>
             )}
