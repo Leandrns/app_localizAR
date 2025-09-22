@@ -95,11 +95,17 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 			scene.add(reticle);
 		}
 
-		// Controller - um único handler que faz ações diferentes conforme mode
+		// Controller - diferentes ações para admin e visitante
 		const controller = renderer.xr.getController(0);
 		controller.addEventListener("select", onSelect);
 		controllerRef.current = controller;
 		scene.add(controller);
+
+		// ✅ NOVO: Event listener para toques na tela (modo visitante)
+		if (mode === "user") {
+			renderer.domElement.addEventListener('touchstart', onTouchStart, false);
+			renderer.domElement.addEventListener('click', onTouchStart, false);
+		}
 
 		// Event listeners
 		renderer.xr.addEventListener("sessionstart", onSessionStart);
@@ -147,11 +153,65 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 		flipAnimationsRef.current = [];
 		lastTimestampRef.current = 0;
 		selectableObjectsRef.current = [];
+		
+		// ✅ Remover event listeners
+		const renderer = rendererRef.current;
+		if (renderer && renderer.domElement) {
+			renderer.domElement.removeEventListener('touchstart', onTouchStart, false);
+			renderer.domElement.removeEventListener('click', onTouchStart, false);
+		}
 	};
 
-	// Handler único para select — cria ponto no admin, dispara flip no visitante
+	// ✅ NOVO: Handler para toques na tela (modo visitante) 
+	const onTouchStart = (event) => {
+		if (mode !== "user" || showNameModal) return; // ✅ Não processar se modal estiver aberto
+		
+		event.preventDefault();
+		
+		// Pegar coordenadas do toque
+		let clientX, clientY;
+		if (event.type === 'touchstart') {
+			clientX = event.touches[0].clientX;
+			clientY = event.touches[0].clientY;
+		} else {
+			clientX = event.clientX;
+			clientY = event.clientY;
+		}
+		
+		// Converter para coordenadas normalizadas (-1 a 1)
+		const mouse = new THREE.Vector2();
+		mouse.x = (clientX / window.innerWidth) * 2 - 1;
+		mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+		
+		// Fazer raycast
+		const raycaster = raycasterRef.current;
+		const camera = cameraRef.current;
+		
+		if (raycaster && camera && selectableObjectsRef.current.length > 0) {
+			raycaster.setFromCamera(mouse, camera);
+			const intersects = raycaster.intersectObjects(selectableObjectsRef.current, true);
+			
+			if (intersects.length > 0) {
+				// ✅ Encontrou objeto - fazer girar
+				let targetObject = intersects[0].object;
+				
+				// Se clicou em um child, pegar o parent (modelo GLTF)
+				while (targetObject.parent && !targetObject.userData.carregado && targetObject.parent !== sceneRef.current) {
+					targetObject = targetObject.parent;
+				}
+				
+				if (targetObject.userData.carregado) {
+					console.log(`🎯 Clicou no ponto: ${targetObject.userData.dadosOriginais.nome || 'Sem nome'}`);
+					startFlipAnimation(targetObject, { axis: "z", degree: Math.PI * 2, duration: 800 });
+				}
+			}
+		}
+	};
+
+	// Handler para select (criar ponto no admin)
 	const onSelect = () => {
 		if (mode !== "admin") return;
+		if (showNameModal) return; // ✅ Não criar se modal estiver aberto
 		if (!calibrado) {
 			alert("Faça a calibração primeiro!");
 			return;
@@ -169,11 +229,22 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 		setPointName('');
 	};
 
-	// inicia animação de flip: axis = 'x'|'y'|'z', degree em radianos, duration em ms
-	const startFlipAnimation = (object3D, { axis = "y", degree = Math.PI, duration = 600 } = {}) => {
+	// ✅ CORRIGIDO: Função de animação de rotação
+	const startFlipAnimation = (object3D, { axis = "z", degree = Math.PI, duration = 600 } = {}) => {
 		if (!object3D) return;
+		
+		// ✅ Verificar se já está animando este objeto
+		const existingAnim = flipAnimationsRef.current.find(anim => anim.object === object3D);
+		if (existingAnim) {
+			console.log("⚠️ Objeto já está animando, ignorando...");
+			return;
+		}
+		
 		const start = object3D.rotation[axis];
 		const target = start + degree;
+		
+		console.log(`🔄 Iniciando animação: ${axis} de ${start} para ${target}`);
+		
 		flipAnimationsRef.current.push({
 			object: object3D,
 			axis,
@@ -281,7 +352,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 				});
 
 				sceneRef.current.add(model);
-				// adiciona ao array de selecionáveis
+				// ✅ Adicionar ao array de selecionáveis
 				selectableObjectsRef.current.push(model);
 			},
 			undefined,
@@ -405,22 +476,25 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 			}
 		}
 
-		// Atualizar animações de flip (se houver)
+		// ✅ CORRIGIDO: Atualizar animações de flip
 		if (flipAnimationsRef.current.length > 0) {
-			// iterar e atualizar
 			const toRemove = [];
 			flipAnimationsRef.current.forEach((anim, idx) => {
 				anim.elapsed += deltaMs;
 				const t = Math.min(anim.elapsed / anim.duration, 1);
 				const eased = easeOutQuad(t);
 				const newRot = anim.start + (anim.target - anim.start) * eased;
+				
 				if (anim.object && anim.object.rotation) {
 					anim.object.rotation[anim.axis] = newRot;
 				}
+				
 				if (t >= 1) {
+					console.log(`✅ Animação concluída para objeto`);
 					toRemove.push(idx);
 				}
 			});
+			
 			// remover do final para não bagunçar índices
 			for (let i = toRemove.length - 1; i >= 0; i--) {
 				flipAnimationsRef.current.splice(toRemove[i], 1);
@@ -443,6 +517,12 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 
 		window.removeEventListener("resize", onWindowResize);
 
+		// ✅ Remover event listeners
+		if (rendererRef.current && rendererRef.current.domElement) {
+			rendererRef.current.domElement.removeEventListener('touchstart', onTouchStart, false);
+			rendererRef.current.domElement.removeEventListener('click', onTouchStart, false);
+		}
+
 		limparObjetosAR();
 
 		if (containerRef.current) {
@@ -450,6 +530,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 		}
 	};
 
+	// ✅ CORRIGIDO: Reset completo do modal
 	const handleCreateNamedPoint = () => {
 		if (!pointName.trim() || !pendingPoint) return;
 
@@ -492,7 +573,12 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 			}
 		);
 
-		// Fechar modal
+		// ✅ CORRIGIDO: Reset completo do modal
+		resetModal();
+	};
+
+	// ✅ NOVO: Função para resetar modal completamente
+	const resetModal = () => {
 		setShowNameModal(false);
 		setPendingPoint(null);
 		setPointName('');
@@ -541,7 +627,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 							onKeyPress={(e) => e.key === 'Enter' && handleCreateNamedPoint()}
 						/>
 						<div style={{display: 'flex', gap: '10px', justifyContent: 'flex-end'}}>
-							<button onClick={() => setShowNameModal(false)} 
+							<button onClick={resetModal} 
 									style={{padding: '10px 20px', background: '#666', 
 										   border: 'none', borderRadius: '8px', color: '#fff',
 										   cursor: 'pointer', fontFamily: 'Lexend'}}>
