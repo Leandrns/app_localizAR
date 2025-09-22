@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import QRScanner from "./QRScanner";
 import ARView from "./ARView";
 import "../styles/user.css";
@@ -14,20 +14,6 @@ function UserScreen({
 	const [showQRScanner, setShowQRScanner] = useState(false);
 	const [showAR, setShowAR] = useState(false);
 
-	const stats = useMemo(() => {
-		const eventos = [...new Set(pontos.map((p) => p.qrReferencia))];
-		const pontosDoEvento = pontoReferencia
-			? pontos.filter((p) => p.qrReferencia === pontoReferencia.qrCode)
-			: [];
-
-		return {
-			totalPontos: pontos.length,
-			totalEventos: eventos.length,
-			pontosEvento: pontosDoEvento.length,
-			eventoAtual: pontoReferencia ? pontoReferencia.qrCode : "Nenhum",
-		};
-	}, [pontos, pontoReferencia]);
-
 	const handleQRDetected = (qrData) => {
 		if (qrData.length > 3) {
 			const novoPontoReferencia = {
@@ -41,12 +27,6 @@ function UserScreen({
 			setCalirado(true);
 			setShowQRScanner(false);
 
-			const pontosDoEvento = pontos.filter((p) => p.qrReferencia === qrData);
-			alert(
-				`Calibração realizada!\nEvento: ${qrData}\nPontos disponíveis: ${pontosDoEvento.length}\nEntre no modo AR para visualizar.`
-			);
-
-			// Inicializar AR automaticamente
 			setTimeout(() => {
 				setShowAR(true);
 			}, 500);
@@ -70,7 +50,7 @@ function UserScreen({
             <header className="user-card-header">
                 <h2><i className="fa-solid fa-map-marker-alt"></i> Modo Visitante</h2>
                 <button className="btn-icon" onClick={onGoHome} title="Voltar">
-                    ←
+                    <i className="fa-solid fa-arrow-left"></i> Voltar
                 </button>
             </header>
 
@@ -83,7 +63,7 @@ function UserScreen({
                     <p className="instructions">
                         Para começar, aponte a câmera para o QR Code do evento para calibrar sua posição.
                     </p>
-                    <button className="botao btn-calibrar" onClick={() => setShowQRScanner(true)}>
+                    <button className="botao btn-calibrar-user" onClick={() => setShowQRScanner(true)}>
                         Calibrar com QR Code
                     </button>
                 </section>

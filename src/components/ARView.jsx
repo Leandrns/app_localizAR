@@ -2,12 +2,7 @@ import { useRef, useEffect } from "react";
 import * as THREE from "three";
 import { ARButton } from "three/examples/jsm/webxr/ARButton.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-	import.meta.env.VITE_SUPABASE_URL,
-  	import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import { supabase } from '../supabaseClient'
 
 function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	const containerRef = useRef(null);
@@ -19,10 +14,13 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	const hitTestSourceRef = useRef(null);
 	const localReferenceSpaceRef = useRef(null);
 	const loaderRef = useRef(new GLTFLoader());
+	const selectableObjectsRef = useRef([]); // objetos que podem ser clicados
+	const raycasterRef = useRef(new THREE.Raycaster());
+	const tempMatrixRef = useRef(new THREE.Matrix4());
+	const flipAnimationsRef = useRef([]); // animações ativas
+	const lastTimestampRef = useRef(0);
 
 	useEffect(() => {
-		carregarPontosSalvos();
-
 		if (calibrado && containerRef.current) {
 			initAR();
 		}
@@ -30,7 +28,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		return () => {
 			cleanup();
 		};
-	}, [calibrado]);
+	}, [calibrado, mode]);
 
 	const initAR = () => {
 		const container = containerRef.current;
@@ -84,7 +82,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 			scene.add(reticle);
 		}
 
-		// Controller
+		// Controller - um único handler que faz ações diferentes conforme mode
 		const controller = renderer.xr.getController(0);
 		controller.addEventListener("select", onSelect);
 		controllerRef.current = controller;
@@ -133,55 +131,115 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 			reticleRef.current.visible = false;
 		}
 		limparObjetosAR();
+		flipAnimationsRef.current = [];
+		lastTimestampRef.current = 0;
+		selectableObjectsRef.current = [];
 	};
 
-	const onSelect = () => {
-		if (mode !== "admin") return;
-		if (!calibrado) {
-			alert("Faça a calibração primeiro!");
+	// Handler único para select — cria ponto no admin, dispara flip no visitante
+	const onSelect = (event) => {
+		// Se for admin, cria pontos
+		if (mode === "admin") {
+			if (!calibrado) {
+				alert("Faça a calibração primeiro!");
+				return;
+			}
+			if (!reticleRef.current || !reticleRef.current.visible) return;
+
+			// Pega posição do retículo
+			const position = new THREE.Vector3();
+			position.setFromMatrixPosition(reticleRef.current.matrix);
+
+			const posicaoRelativa = calcularPosicaoRelativa(position);
+
+			// Carrega modelo 3D
+			loaderRef.current.load(
+				"/map_pointer_3d_icon.glb",
+				(gltf) => {
+					const model = gltf.scene;
+					model.position.copy(position);
+					model.position.y += 1;
+					model.scale.set(0.1, 0.1, 0.1);
+
+					model.userData = {
+						carregado: true,
+						dadosOriginais: posicaoRelativa,
+					};
+
+					// Cor aleatória
+					const cor = new THREE.Color().setHSL(Math.random(), 0.7, 0.5);
+					model.traverse((child) => {
+						if (child.isMesh) {
+							if (child.material) child.material = child.material.clone();
+							child.material.color = cor;
+						}
+					});
+
+					sceneRef.current.add(model);
+					// adiciona ao selectable para consistência
+					selectableObjectsRef.current.push(model);
+
+					if (onCreatePoint) onCreatePoint(posicaoRelativa);
+				},
+				undefined,
+				(error) => {
+					console.error("Erro ao carregar modelo:", error);
+					// Fallback para cubo simples
+					criarCuboFallback(position, posicaoRelativa);
+				}
+			);
 			return;
 		}
-		if (!reticleRef.current || !reticleRef.current.visible) return;
 
-		// Pega posição do retículo
-		const position = new THREE.Vector3();
-		position.setFromMatrixPosition(reticleRef.current.matrix);
+		// Modo visitante: detectar interseção com objetos carregados e iniciar flip
+		if (mode === "user") {
+			const controller = controllerRef.current;
+			const scene = sceneRef.current;
+			if (!controller || !scene) return;
 
-		const posicaoRelativa = calcularPosicaoRelativa(position);
+			// Raycast a partir do controller
+			const raycaster = raycasterRef.current;
+			const tempMatrix = tempMatrixRef.current;
+			tempMatrix.identity().extractRotation(controller.matrixWorld);
 
-		// Carrega modelo 3D
-		loaderRef.current.load(
-			"/map_pointer_3d_icon.glb",
-			(gltf) => {
-				const model = gltf.scene;
-				model.position.copy(position);
-				model.position.y += 1;
-				model.scale.set(0.1, 0.1, 0.1);
+			raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+			raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
 
-				model.userData = {
-					carregado: true,
-					dadosOriginais: posicaoRelativa,
-				};
+			const intersects = raycaster.intersectObjects(selectableObjectsRef.current, true);
+			if (intersects.length > 0) {
+				// pegar o objeto
+				let selected = intersects[0].object;
+				let root = selected;
+				while (root.parent && !root.userData?.carregado) {
+					root = root.parent;
+				}
+				// se root não tiver flag, usar selected
+				if (!root.userData) root = selected;
 
-				// Cor aleatória
-				const cor = new THREE.Color().setHSL(Math.random(), 0.7, 0.5);
-				model.traverse((child) => {
-					if (child.isMesh) {
-						child.material.color = cor;
-					}
-				});
-
-				sceneRef.current.add(model);
-
-				onCreatePoint(posicaoRelativa);
-			},
-			undefined,
-			(error) => {
-				console.error("Erro ao carregar modelo:", error);
-				// Fallback para cubo simples
-				criarCuboFallback(position, posicaoRelativa);
+				// Iniciar animação de flip (rotaciona em X)
+				startFlipAnimation(root, { axis: "y", degree: (2*Math.PI), duration: 600 });
 			}
-		);
+		}
+	};
+
+	// inicia animação de flip: axis = 'x'|'y'|'z', degree em radianos, duration em ms
+	const startFlipAnimation = (object3D, { axis = "y", degree = Math.PI, duration = 600 } = {}) => {
+		if (!object3D) return;
+		const start = object3D.rotation[axis];
+		const target = start + degree;
+		flipAnimationsRef.current.push({
+			object: object3D,
+			axis,
+			start,
+			target,
+			elapsed: 0,
+			duration,
+		});
+	};
+
+	// easing (easeOutQuad)
+	const easeOutQuad = (t) => {
+		return t * (2 - t);
 	};
 
 	const criarCuboFallback = (position, posicaoRelativa) => {
@@ -193,7 +251,13 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		cube.position.copy(position);
 		cube.position.y += 0.05;
 
+		cube.userData = {
+			carregado: true,
+			dadosOriginais: posicaoRelativa,
+		};
+
 		sceneRef.current.add(cube);
+		selectableObjectsRef.current.push(cube);
 
 		if (onCreatePoint) {
 			onCreatePoint(posicaoRelativa);
@@ -254,11 +318,14 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 
 				model.traverse((child) => {
 					if (child.isMesh) {
+						if (child.material) child.material = child.material.clone();
 						child.material.color = cor;
 					}
 				});
 
 				sceneRef.current.add(model);
+				// adiciona ao array de selecionáveis
+				selectableObjectsRef.current.push(model);
 			},
 			undefined,
 			(error) => {
@@ -287,6 +354,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		};
 
 		sceneRef.current.add(cube);
+		selectableObjectsRef.current.push(cube);
 	};
 
 	const calcularPosicaoRelativa = (posicaoAR) => {
@@ -310,10 +378,21 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		});
 
 		objetosParaRemover.forEach((obj) => {
-			sceneRef.current.remove(obj);
+			if (obj.parent) obj.parent.remove(obj);
 			if (obj.geometry) obj.geometry.dispose();
-			if (obj.material) obj.material.dispose();
+			if (obj.material) {
+				// materiais podem ser arrays ou objetos
+				if (Array.isArray(obj.material)) {
+					obj.material.forEach((m) => m.dispose && m.dispose());
+				} else {
+					obj.material.dispose && obj.material.dispose();
+				}
+			}
 		});
+
+		// limpar arrays auxiliares
+		selectableObjectsRef.current = [];
+		flipAnimationsRef.current = [];
 	};
 
 	const onWindowResize = () => {
@@ -342,6 +421,12 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		const hitTestSource = hitTestSourceRef.current;
 		const localReferenceSpace = localReferenceSpaceRef.current;
 
+		// calcular delta time (ms)
+		const last = lastTimestampRef.current || timestamp;
+		const deltaMs = timestamp - last;
+		lastTimestampRef.current = timestamp;
+
+		// Atualizar hit-test / reticle
 		if (frame && hitTestSource && localReferenceSpace) {
 			const hitTestResults = frame.getHitTestResults(hitTestSource);
 
@@ -363,6 +448,28 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 			}
 		}
 
+		// Atualizar animações de flip (se houver)
+		if (flipAnimationsRef.current.length > 0) {
+			// iterar e atualizar
+			const toRemove = [];
+			flipAnimationsRef.current.forEach((anim, idx) => {
+				anim.elapsed += deltaMs;
+				const t = Math.min(anim.elapsed / anim.duration, 1);
+				const eased = easeOutQuad(t);
+				const newRot = anim.start + (anim.target - anim.start) * eased;
+				if (anim.object && anim.object.rotation) {
+					anim.object.rotation[anim.axis] = newRot;
+				}
+				if (t >= 1) {
+					toRemove.push(idx);
+				}
+			});
+			// remover do final para não bagunçar índices
+			for (let i = toRemove.length - 1; i >= 0; i--) {
+				flipAnimationsRef.current.splice(toRemove[i], 1);
+			}
+		}
+
 		if (renderer && scene && camera) {
 			renderer.render(scene, camera);
 		}
@@ -372,7 +479,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		if (rendererRef.current) {
 			rendererRef.current.setAnimationLoop(null);
 
-			if (rendererRef.current.xr.getSession()) {
+			if (rendererRef.current.xr.getSession && rendererRef.current.xr.getSession()) {
 				rendererRef.current.xr.getSession().end();
 			}
 		}
