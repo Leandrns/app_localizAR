@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { ARButton } from "three/examples/jsm/webxr/ARButton.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { supabase } from '../supabaseClient'
+import { supabase } from '../supabaseClient'
 
 function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filteredMarkers = [] }) {
 	const containerRef = useRef(null);
@@ -99,6 +100,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filte
 		}
 
 		// Controller - um único handler que faz ações diferentes conforme mode
+		// Controller - um único handler que faz ações diferentes conforme mode
 		const controller = renderer.xr.getController(0);
 		controller.addEventListener("select", onSelect);
 		controllerRef.current = controller;
@@ -161,7 +163,24 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filte
 				return;
 			}
 			if (!reticleRef.current || !reticleRef.current.visible) return;
+		flipAnimationsRef.current = [];
+		lastTimestampRef.current = 0;
+		selectableObjectsRef.current = [];
+	};
 
+	// Handler único para select — cria ponto no admin, dispara flip no visitante
+	const onSelect = (event) => {
+		// Se for admin, cria pontos
+		if (mode === "admin") {
+			if (!calibrado) {
+				alert("Faça a calibração primeiro!");
+				return;
+			}
+			if (!reticleRef.current || !reticleRef.current.visible) return;
+
+			// Pega posição do retículo
+			const position = new THREE.Vector3();
+			position.setFromMatrixPosition(reticleRef.current.matrix);
 			// Pega posição do retículo
 			const position = new THREE.Vector3();
 			position.setFromMatrixPosition(reticleRef.current.matrix);
@@ -216,14 +235,14 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filte
 
 		const { position, posicaoRelativa } = pendingPosition;
 
-		// Carrega modelo 3D
-		loaderRef.current.load(
-			"/map_pointer_3d_icon.glb",
-			(gltf) => {
-				const model = gltf.scene;
-				model.position.copy(position);
-				model.position.y += 1;
-				model.scale.set(0.1, 0.1, 0.1);
+			// Carrega modelo 3D
+			loaderRef.current.load(
+				"/map_pointer_3d_icon.glb",
+				(gltf) => {
+					const model = gltf.scene;
+					model.position.copy(position);
+					model.position.y += 1;
+					model.scale.set(0.1, 0.1, 0.1);
 
 				model.userData = {
 					carregado: true,
@@ -297,6 +316,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filte
 
 		sceneRef.current.add(cube);
 		selectableObjectsRef.current.push(cube);
+		selectableObjectsRef.current.push(cube);
 
 		if (onCreatePoint) {
 			onCreatePoint({...posicaoRelativa, nome});
@@ -365,11 +385,14 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filte
 				model.traverse((child) => {
 					if (child.isMesh) {
 						if (child.material) child.material = child.material.clone();
+						if (child.material) child.material = child.material.clone();
 						child.material.color = cor;
 					}
 				});
 
 				sceneRef.current.add(model);
+				// adiciona ao array de selecionáveis
+				selectableObjectsRef.current.push(model);
 				// adiciona ao array de selecionáveis
 				selectableObjectsRef.current.push(model);
 			},
@@ -402,6 +425,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filte
 
 		sceneRef.current.add(cube);
 		selectableObjectsRef.current.push(cube);
+		selectableObjectsRef.current.push(cube);
 	};
 
 	const calcularPosicaoRelativa = (posicaoAR) => {
@@ -426,7 +450,21 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filte
 
 		objetosParaRemover.forEach((obj) => {
 			if (obj.parent) obj.parent.remove(obj);
+			if (obj.parent) obj.parent.remove(obj);
 			if (obj.geometry) obj.geometry.dispose();
+			if (obj.material) {
+				// materiais podem ser arrays ou objetos
+				if (Array.isArray(obj.material)) {
+					obj.material.forEach((m) => m.dispose && m.dispose());
+				} else {
+					obj.material.dispose && obj.material.dispose();
+				}
+			}
+		});
+
+		// limpar arrays auxiliares
+		selectableObjectsRef.current = [];
+		flipAnimationsRef.current = [];
 			if (obj.material) {
 				// materiais podem ser arrays ou objetos
 				if (Array.isArray(obj.material)) {
@@ -468,6 +506,12 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filte
 		const hitTestSource = hitTestSourceRef.current;
 		const localReferenceSpace = localReferenceSpaceRef.current;
 
+		// calcular delta time (ms)
+		const last = lastTimestampRef.current || timestamp;
+		const deltaMs = timestamp - last;
+		lastTimestampRef.current = timestamp;
+
+		// Atualizar hit-test / reticle
 		// calcular delta time (ms)
 		const last = lastTimestampRef.current || timestamp;
 		const deltaMs = timestamp - last;
@@ -517,6 +561,28 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filte
 			}
 		}
 
+		// Atualizar animações de flip (se houver)
+		if (flipAnimationsRef.current.length > 0) {
+			// iterar e atualizar
+			const toRemove = [];
+			flipAnimationsRef.current.forEach((anim, idx) => {
+				anim.elapsed += deltaMs;
+				const t = Math.min(anim.elapsed / anim.duration, 1);
+				const eased = easeOutQuad(t);
+				const newRot = anim.start + (anim.target - anim.start) * eased;
+				if (anim.object && anim.object.rotation) {
+					anim.object.rotation[anim.axis] = newRot;
+				}
+				if (t >= 1) {
+					toRemove.push(idx);
+				}
+			});
+			// remover do final para não bagunçar índices
+			for (let i = toRemove.length - 1; i >= 0; i--) {
+				flipAnimationsRef.current.splice(toRemove[i], 1);
+			}
+		}
+
 		if (renderer && scene && camera) {
 			renderer.render(scene, camera);
 		}
@@ -526,6 +592,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filte
 		if (rendererRef.current) {
 			rendererRef.current.setAnimationLoop(null);
 
+			if (rendererRef.current.xr.getSession && rendererRef.current.xr.getSession()) {
 			if (rendererRef.current.xr.getSession && rendererRef.current.xr.getSession()) {
 				rendererRef.current.xr.getSession().end();
 			}

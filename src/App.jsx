@@ -3,6 +3,7 @@ import HomeScreen from "./components/HomeScreen";
 import AdminScreen from "./components/AdminScreen";
 import UserScreen from "./components/UserScreen";
 import { useLocalStorage } from "./hooks/useLocalStorage";
+import { supabase } from './supabaseClient'
 import "./App.css";
 
 function App() {
@@ -10,6 +11,21 @@ function App() {
 	const [calibrado, setCalirado] = useState(false);
 	const [pontoReferencia, setPontoReferencia] = useState(null);
 	const [pontos, setPontos] = useLocalStorage("pontos", []);
+	const [qntdPontos, setQntdPontos] = useState(0);
+
+	async function getQtndPontos(qrReferencia) {
+		const { count, error } = await supabase
+			.from("pontos")
+			.select("*", { count: 'exact', head: true })
+			.eq("qr_referencia", qrReferencia)
+
+		if (error) {
+			console.log("Erro ao encontrar pontos: ", error.message)
+			return;
+		}
+
+		return count;
+	}
 
 	const resetSystem = () => {
 		setCalirado(false);
@@ -37,6 +53,9 @@ function App() {
 					setCalirado={setCalirado}
 					pontoReferencia={pontoReferencia}
 					setPontoReferencia={setPontoReferencia}
+					qntdPontos={qntdPontos}
+					setQntdPontos={setQntdPontos}
+					getQtndPontos={getQtndPontos}
 					pontos={pontos}
 					updatePontos={updatePontos}
 					onGoHome={resetSystem}
@@ -49,6 +68,9 @@ function App() {
 					setCalirado={setCalirado}
 					pontoReferencia={pontoReferencia}
 					setPontoReferencia={setPontoReferencia}
+					qntdPontos={qntdPontos}
+					setQntdPontos={setQntdPontos}
+					getQtndPontos={getQtndPontos}
 					pontos={pontos}
 					onGoHome={resetSystem}
 				/>

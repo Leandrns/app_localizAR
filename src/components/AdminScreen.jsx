@@ -84,7 +84,15 @@ function AdminScreen({
 		if (error) {
 			console.error("Erro ao salvar ponto no Supabase:", error.message);
 		} else {
-			console.log("✅ Ponto salvo no Supabase com nome:", posicaoRelativaComNome.nome);
+			console.log("✅ Ponto salvo no Supabase");
+		}
+	};
+
+	const handleClearAll = () => {
+		if (confirm("Tem certeza que deseja limpar TODOS os pontos salvos?")) {
+			updatePontos([]);
+			setPontosCreated(0);
+			alert("Todos os pontos foram removidos!");
 		}
 	};
 

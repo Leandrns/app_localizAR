@@ -1,4 +1,4 @@
-![alt text](/public/Logo_horizontal_sem_fundo-Photoroom.png)
+![alt text](/public/logo_horizontalsemfundo.png)
 
 **Versão:** 1.0.0  
 **Status:** Em desenvolvimento ativo
@@ -33,6 +33,10 @@
 - **👥 Modo Visitante:** Visualização dos pontos criados pelos administradores
 - **💾 Persistência de Dados:** Integração com Supabase para armazenamento em nuvem
 - **🌐 Cross-platform:** Funciona em dispositivos móveis com suporte a WebXR
+
+> Além dessa aplicação em AR, o LocalizAR possui um protótipo em VR, presente nesse repositório:
+> 
+> https://github.com/Leandrns/IC_VR_A-Frame
 
 ---
 

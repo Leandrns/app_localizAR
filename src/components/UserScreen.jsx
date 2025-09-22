@@ -59,6 +59,7 @@ function UserScreen({
                 <h2><i className="fa-solid fa-map-marker-alt"></i> Modo Visitante</h2>
                 <button className="btn-icon" onClick={onGoHome} title="Voltar">
                     <i className="fa-solid fa-arrow-left"></i> Voltar
+                    <i className="fa-solid fa-arrow-left"></i> Voltar
                 </button>
             </header>
 
@@ -71,6 +72,7 @@ function UserScreen({
                     <p className="instructions">
                         Para começar, aponte a câmera para o QR Code do evento para calibrar sua posição.
                     </p>
+                    <button className="botao btn-calibrar-user" onClick={() => setShowQRScanner(true)}>
                     <button className="botao btn-calibrar-user" onClick={() => setShowQRScanner(true)}>
                         Calibrar com QR Code
                     </button>
