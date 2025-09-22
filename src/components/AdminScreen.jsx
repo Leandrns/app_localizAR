@@ -57,34 +57,37 @@ function AdminScreen({
 		}
 	};
 
-	const handleCreatePoint = async (posicaoRelativa) => {
-		const novoPonto = {
-			id: generateId(),
-			posicaoRelativa: posicaoRelativa,
-			qrReferencia: pontoReferencia.qrCode,
-			timestamp: Date.now(),
-			criadoPor: "admin",
-		};
+	// MODIFICAR a função handleCreatePoint existente:
+const handleCreatePoint = async (dadosPonto) => {
+    const novoPonto = {
+        id: generateId(),
+        posicaoRelativa: dadosPonto,
+        qrReferencia: pontoReferencia.qrCode,
+        timestamp: Date.now(),
+        criadoPor: "admin",
+        nome: dadosPonto.nome || 'Ponto sem nome' // ✅ ADICIONAR esta linha
+    };
 
-		updatePontos(novoPonto);
-		setPontosCreated((prev) => prev + 1);
+    updatePontos(novoPonto);
+    setPontosCreated((prev) => prev + 1);
 
-		// Salva no Supabase
-		const { error } = await supabase.from("pontos").insert({
-			id: novoPonto.id,
-			pos_x: posicaoRelativa.x,
-			pos_y: posicaoRelativa.y,
-			pos_z: posicaoRelativa.z,
-			qr_referencia: novoPonto.qrReferencia,
-			created_by: novoPonto.criadoPor,
-		});
+    // MODIFICAR insert do Supabase:
+    const { error } = await supabase.from("pontos").insert({
+        id: novoPonto.id,
+        pos_x: dadosPonto.x,
+        pos_y: dadosPonto.y,
+        pos_z: dadosPonto.z,
+        qr_referencia: novoPonto.qrReferencia,
+        created_by: novoPonto.criadoPor,
+        nome: dadosPonto.nome // ✅ ADICIONAR esta linha
+    });
 
-		if (error) {
-			console.error("Erro ao salvar ponto no Supabase:", error.message);
-		} else {
-			console.log("✅ Ponto salvo no Supabase");
-		}
-	};
+    if (error) {
+        console.error("Erro ao salvar ponto no Supabase:", error.message);
+    } else {
+        console.log(`✅ Ponto "${dadosPonto.nome}" salvo no Supabase`);
+    }
+};
 
 	const generateId = () => {
 		return Date.now().toString(36) + Math.random().toString(36);
