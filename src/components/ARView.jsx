@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import * as THREE from "three";
 import { ARButton } from "three/examples/jsm/webxr/ARButton.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -19,6 +19,25 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	const tempMatrixRef = useRef(new THREE.Matrix4());
 	const flipAnimationsRef = useRef([]); // animações ativas
 	const lastTimestampRef = useRef(0);
+	
+	// Estados para o sistema de prêmios
+	const [showPrizeModal, setShowPrizeModal] = useState(false);
+	const [currentPrize, setCurrentPrize] = useState(null);
+	const clickCounterRef = useRef(new Map()); // Map para contar cliques por objeto
+
+	// Lista de prêmios possíveis
+	const prizes = [
+		{ name: "Desconto de 10%", description: "10% de desconto na próxima compra", icon: "🎟️" },
+		{ name: "Brinde Especial", description: "Ganhe um brinde exclusivo do evento", icon: "🎁" },
+		{ name: "Entrada VIP", description: "Acesso VIP para a próxima área", icon: "⭐" },
+		{ name: "Drink Grátis", description: "Uma bebida cortesia no bar", icon: "🍹" },
+		{ name: "Foto Premium", description: "Sessão de fotos profissional gratuita", icon: "📸" },
+		{ name: "Sorteio Duplo", description: "Participe do sorteio com chance dupla", icon: "🍀" },
+		{ name: "Acesso Backstage", description: "Visite o backstage do evento", icon: "🎭" },
+		{ name: "Mesa Reservada", description: "Mesa reservada na área premium", icon: "🪑" },
+		{ name: "Kit Exclusivo", description: "Kit de produtos exclusivos", icon: "📦" },
+		{ name: "Experiência Plus", description: "Upgrade para experiência premium", icon: "✨" }
+	];
 
 	useEffect(() => {
 		if (calibrado && containerRef.current) {
@@ -134,6 +153,14 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		flipAnimationsRef.current = [];
 		lastTimestampRef.current = 0;
 		selectableObjectsRef.current = [];
+		// Limpar contador de cliques
+		clickCounterRef.current.clear();
+	};
+
+	// Função para gerar prêmio aleatório
+	const generateRandomPrize = () => {
+		const randomIndex = Math.floor(Math.random() * prizes.length);
+		return prizes[randomIndex];
 	};
 
 	// Handler único para select — cria ponto no admin, dispara flip no visitante
@@ -216,8 +243,29 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 				// se root não tiver flag, usar selected
 				if (!root.userData) root = selected;
 
-				// Iniciar animação de flip (rotaciona em X)
+				// Incrementar contador de cliques para este objeto
+				const objectId = root.uuid;
+				const currentClicks = clickCounterRef.current.get(objectId) || 0;
+				const newClickCount = currentClicks + 1;
+				clickCounterRef.current.set(objectId, newClickCount);
+
+				// Iniciar animação de flip (rotaciona em Y)
 				startFlipAnimation(root, { axis: "y", degree: (2*Math.PI), duration: 600 });
+
+				// Verificar se atingiu 3 cliques
+				if (newClickCount >= 3) {
+					// Resetar contador para este objeto
+					clickCounterRef.current.set(objectId, 0);
+					
+					// Gerar prêmio aleatório
+					const prize = generateRandomPrize();
+					setCurrentPrize(prize);
+					
+					// Mostrar modal após um pequeno delay para a animação terminar
+					setTimeout(() => {
+						setShowPrizeModal(true);
+					}, 700);
+				}
 			}
 		}
 	};
@@ -493,18 +541,128 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		}
 	};
 
+	// Fechar modal de prêmio
+	const closePrizeModal = () => {
+		setShowPrizeModal(false);
+		setCurrentPrize(null);
+	};
+
 	return (
-		<div
-			ref={containerRef}
-			style={{
-				position: "fixed",
-				top: 0,
-				left: 0,
-				width: "100%",
-				height: "100%",
-				zIndex: 1,
-			}}
-		/>
+		<>
+			<div
+				ref={containerRef}
+				style={{
+					position: "fixed",
+					top: 0,
+					left: 0,
+					width: "100%",
+					height: "100%",
+					zIndex: 1,
+				}}
+			/>
+
+			{/* Modal de Prêmio */}
+			{showPrizeModal && currentPrize && (
+				<div 
+					style={{
+						position: "fixed",
+						top: 0,
+						left: 0,
+						width: "100%",
+						height: "100%",
+						backgroundColor: "rgba(0, 0, 0, 0.8)",
+						display: "flex",
+						justifyContent: "center",
+						alignItems: "center",
+						zIndex: 1000,
+						padding: "20px"
+					}}
+				>
+					<div 
+						style={{
+							backgroundColor: "#1e1e1e",
+							border: "2px solid #4ecdc4",
+							borderRadius: "16px",
+							padding: "30px",
+							textAlign: "center",
+							maxWidth: "400px",
+							width: "100%",
+							color: "#fff",
+							boxShadow: "0 8px 32px rgba(0, 0, 0, 0.5)"
+						}}
+					>
+						<div style={{ fontSize: "60px", marginBottom: "15px" }}>
+							🎉
+						</div>
+						
+						<h2 style={{ 
+							color: "#4ecdc4", 
+							marginBottom: "10px",
+							fontSize: "24px"
+						}}>
+							Parabéns!
+						</h2>
+						
+						<div style={{ 
+							fontSize: "40px", 
+							marginBottom: "15px" 
+						}}>
+							{currentPrize.icon}
+						</div>
+						
+						<h3 style={{ 
+							color: "#fff", 
+							marginBottom: "10px",
+							fontSize: "20px"
+						}}>
+							{currentPrize.name}
+						</h3>
+						
+						<p style={{ 
+							color: "#a0a0a0", 
+							marginBottom: "25px",
+							lineHeight: "1.4"
+						}}>
+							{currentPrize.description}
+						</p>
+						
+						<button
+							onClick={closePrizeModal}
+							style={{
+								backgroundColor: "#4ecdc4",
+								color: "#1e1e1e",
+								border: "none",
+								padding: "12px 30px",
+								borderRadius: "8px",
+								fontSize: "16px",
+								fontWeight: "bold",
+								cursor: "pointer",
+								transition: "all 0.2s ease"
+							}}
+							onMouseOver={(e) => {
+								e.target.style.backgroundColor = "#45b7aa";
+								e.target.style.transform = "scale(1.05)";
+							}}
+							onMouseOut={(e) => {
+								e.target.style.backgroundColor = "#4ecdc4";
+								e.target.style.transform = "scale(1)";
+							}}
+						>
+							Resgatar Prêmio
+						</button>
+						
+						<p style={{ 
+							fontSize: "12px", 
+							color: "#666", 
+							marginTop: "15px",
+							marginBottom: "0"
+						}}>
+							Mostre esta tela no balcão de atendimento
+						</p>
+					</div>
+				</div>
+			)}
+		</>
 	);
 }
 
