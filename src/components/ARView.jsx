@@ -4,7 +4,7 @@ import { ARButton } from "three/examples/jsm/webxr/ARButton.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { supabase } from '../supabaseClient'
 
-function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
+function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtroMarcador }) {
 	const containerRef = useRef(null);
 	const sceneRef = useRef(null);
 	const rendererRef = useRef(null);
@@ -19,6 +19,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	const tempMatrixRef = useRef(new THREE.Matrix4());
 	const flipAnimationsRef = useRef([]); // animações ativas
 	const lastTimestampRef = useRef(0);
+	const todosObjetosRef = useRef([]);
 
 	useEffect(() => {
 		if (calibrado && containerRef.current) {
@@ -29,6 +30,50 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 			cleanup();
 		};
 	}, [calibrado, mode]);
+
+	useEffect(() => {
+		if (mode === "user" && calibrado) {
+			aplicarFiltroVisualizacao();
+		}
+	}, [filtroMarcador, mode, calibrado]);
+
+	const aplicarFiltroVisualizacao = () => {
+		todosObjetosRef.current.forEach((obj) => {
+			if (filtroMarcador) {
+				// Se há filtro ativo, mostra apenas o objeto correspondente
+				const shouldShow = obj.userData?.dadosOriginais?.id === filtroMarcador.id;
+				obj.visible = shouldShow;
+				
+				// Destaca o objeto filtrado com uma cor especial
+				if (shouldShow) {
+					destacarObjeto(obj, true);
+				}
+			} else {
+				// Se não há filtro, mostra todos os objetos
+				obj.visible = true;
+				destacarObjeto(obj, false);
+			}
+		});
+	};
+
+	// NOVA FUNÇÃO: Destaca/remove destaque de um objeto
+	const destacarObjeto = (objeto, destacar) => {
+		objeto.traverse((child) => {
+			if (child.isMesh && child.material) {
+				if (destacar) {
+					// Aplica cor de destaque (amarelo/dourado)
+					child.material.color.setHex(0xffdd44);
+					child.material.emissive.setHex(0x442200);
+				} else {
+					// Restaura cor original (se havia uma cor armazenada)
+					if (child.userData?.corOriginal) {
+						child.material.color.copy(child.userData.corOriginal);
+						child.material.emissive.setHex(0x000000);
+					}
+				}
+			}
+		});
+	};
 
 	const initAR = () => {
 		const container = containerRef.current;
@@ -134,6 +179,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		flipAnimationsRef.current = [];
 		lastTimestampRef.current = 0;
 		selectableObjectsRef.current = [];
+		todosObjetosRef.current = [];
 	};
 
 	// Handler único para select — cria ponto no admin, dispara flip no visitante
@@ -295,6 +341,12 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 
 				criarModeloCarregado(posicaoAbsoluta, ponto, index);
 			});
+
+	if (mode === "user") {
+				setTimeout(() => {
+					aplicarFiltroVisualizacao();
+				}, 1000);
+			}
 		} catch (err) {
 			console.error("Erro inesperado ao buscar pontos:", err);
 		}
@@ -320,6 +372,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 					if (child.isMesh) {
 						if (child.material) child.material = child.material.clone();
 						child.material.color = cor;
+						child.userData = { corOriginal: cor.clone() };
 					}
 				});
 

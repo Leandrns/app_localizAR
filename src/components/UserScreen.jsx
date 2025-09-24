@@ -13,6 +13,48 @@ function UserScreen({
 }) {
 	const [showQRScanner, setShowQRScanner] = useState(false);
 	const [showAR, setShowAR] = useState(false);
+	const [marcadoresDisponiveis, setMarcadoresDisponiveis] = useState([]);
+	const [filtroAtivo, setFiltroAtivo] = useState(null);
+	const [showFiltros, setShowFiltros] = useState(false);
+
+	// NOVA FUNÇÃO: Carrega marcadores do banco quando calibrado
+	useEffect(() => {
+		if (calibrado && pontoReferencia) {
+			carregarMarcadoresDisponiveis();
+		}
+	}, [calibrado, pontoReferencia]);
+
+	// NOVA FUNÇÃO: Busca marcadores disponíveis no Supabase
+	const carregarMarcadoresDisponiveis = async () => {
+		try {
+			const { data, error } = await supabase
+				.from("pontos")
+				.select("id, nome")
+				.eq("qr_referencia", pontoReferencia.qrCode);
+
+			if (error) {
+				console.error("Erro ao carregar marcadores:", error.message);
+				return;
+			}
+
+			setMarcadoresDisponiveis(data || []);
+			console.log(`Encontrados ${data?.length || 0} marcadores para o evento`);
+		} catch (err) {
+			console.error("Erro inesperado ao buscar marcadores:", err);
+		}
+	};
+
+	// NOVA FUNÇÃO: Aplica/remove filtro de marcador
+	const aplicarFiltro = (marcador) => {
+		if (filtroAtivo?.id === marcador.id) {
+			// Se o mesmo marcador foi clicado, remove o filtro
+			setFiltroAtivo(null);
+		} else {
+			// Aplica o novo filtro
+			setFiltroAtivo(marcador);
+		}
+		setShowFiltros(false);
+	};
 
 	const handleQRDetected = (qrData) => {
 		if (qrData.length > 3) {
@@ -26,6 +68,9 @@ function UserScreen({
 			setPontoReferencia(novoPontoReferencia);
 			setCalirado(true);
 			setShowQRScanner(false);
+
+			setFiltroAtivo(null);
+			setMarcadoresDisponiveis([]);
 
 			setTimeout(() => {
 				setShowAR(true);
@@ -81,9 +126,52 @@ function UserScreen({
                             {pontoReferencia.qrCode}
                         </div>
                     </div>
-                    
+									{marcadoresDisponiveis.length > 0 && (
+											<div className="filtros-container">
+													<div className="filtros-header">
+															<button 
+																	className="btn-filtros" 
+																	onClick={() => setShowFiltros(!showFiltros)}
+															>
+																	<i className="fa-solid fa-filter"></i> 
+																	{filtroAtivo ? `Filtro: ${filtroAtivo.nome}` : 'Filtrar Marcadores'}
+															</button>
+															{filtroAtivo && (
+																	<button 
+																			className="btn-limpar-filtro" 
+																			onClick={() => setFiltroAtivo(null)}
+																			title="Limpar filtro"
+																	>
+																			<i className="fa-solid fa-times"></i>
+																	</button>
+															)}
+													</div>
+
+										{showFiltros && (
+                                <div className="lista-marcadores">
+                                    {marcadoresDisponiveis.map((marcador) => (
+                                        <button
+                                            key={marcador.id}
+                                            className={`marcador-item ${filtroAtivo?.id === marcador.id ? 'ativo' : ''}`}
+                                            onClick={() => aplicarFiltro(marcador)}
+                                        >
+                                            <i className="fa-solid fa-map-marker-alt"></i>
+                                            {marcador.nome}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     <p className="instructions">
                         Tudo pronto! Clique no botão abaixo para entrar no modo de Realidade Aumentada.
+                        {marcadoresDisponiveis.length > 0 && (
+                            <>
+                                <br /><br />
+                                <strong>Dica:</strong> Use o filtro acima para destacar marcadores específicos no AR.
+                            </>
+                        )}
                     </p>
 
                     <div className="action-buttons">
@@ -109,6 +197,7 @@ function UserScreen({
 					calibrado={calibrado}
 					pontoReferencia={pontoReferencia}
 					pontos={pontos}
+					filtroMarcador={filtroAtivo}
 				/>
 			)} 
 		</div>
