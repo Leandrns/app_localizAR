@@ -45,6 +45,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 				destacarObjeto(obj, false);
 			}
 		});
+		aplicarFiltroVisualizacao();
 	}, [filtroMarcador]);
 
 
@@ -351,6 +352,11 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 
 				criarModeloCarregado(posicaoAbsoluta, ponto, index);
 			});
+
+			setTimeout(() => {
+				aplicarFiltroVisualizacao();
+			}, 500);
+
 
 		} catch (err) {
 			console.error("Erro inesperado ao buscar pontos:", err);
