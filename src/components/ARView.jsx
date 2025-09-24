@@ -31,26 +31,21 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 		};
 	}, [calibrado, mode]);
 
-	useEffect(() => {
-		if (mode === "user" && calibrado) {
-			aplicarFiltroVisualizacao();
-		}
-	}, [filtroMarcador, mode, calibrado]);
 
 	useEffect(() => {
 		if (!todosObjetosRef.current) return;
 
 		todosObjetosRef.current.forEach((obj) => {
 			if (filtroMarcador) {
-			const shouldShow = obj.userData?.dadosOriginais?.id === filtroMarcador.id;
-			obj.visible = shouldShow;
-			destacarObjeto(obj, shouldShow);
+				const shouldShow = obj.userData?.dadosOriginais?.id === filtroMarcador.id;
+				obj.visible = shouldShow;
+				destacarObjeto(obj, shouldShow);
 			} else {
-			obj.visible = true;
-			destacarObjeto(obj, false);
+				obj.visible = true;
+				destacarObjeto(obj, false);
 			}
 		});
-		}, [filtroMarcador]);
+	}, [filtroMarcador]);
 
 
 	const aplicarFiltroVisualizacao = () => {
@@ -60,7 +55,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 				const shouldShow = obj.userData?.dadosOriginais?.id === filtroMarcador.id;
 				obj.visible = shouldShow;
 				destacarObjeto(obj, shouldShow);
-				
+
 			} else {
 				// Se não há filtro, mostra todos os objetos
 				obj.visible = true;
@@ -177,8 +172,8 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 
 				// Limpar objetos antigos antes de carregar
 				setTimeout(() => {
-				limparObjetosAR();
-				carregarPontosSalvos();
+					limparObjetosAR();
+					carregarPontosSalvos();
 				}, 1000);
 			}
 		});
@@ -278,7 +273,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 				if (!root.userData) root = selected;
 
 				// Iniciar animação de flip (rotaciona em X)
-				startFlipAnimation(root, { axis: "y", degree: (2*Math.PI), duration: 600 });
+				startFlipAnimation(root, { axis: "y", degree: (2 * Math.PI), duration: 600 });
 			}
 		}
 	};
@@ -357,11 +352,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 				criarModeloCarregado(posicaoAbsoluta, ponto, index);
 			});
 
-	if (mode === "user") {
-				setTimeout(() => {
-					aplicarFiltroVisualizacao();
-				}, 1000);
-			}
 		} catch (err) {
 			console.error("Erro inesperado ao buscar pontos:", err);
 		}
@@ -403,8 +393,12 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 				if (!todosObjetosRef.current.includes(model)) {
 					todosObjetosRef.current.push(model);
 				}
-				// Sempre aplicar filtro após adicionar
-				
+				if (filtroMarcador) {
+					const shouldShow = model.userData?.dadosOriginais?.id === filtroMarcador.id;
+					model.visible = shouldShow;
+					destacarObjeto(model, shouldShow);
+				}
+
 			},
 			undefined,
 			(error) => {
@@ -437,9 +431,14 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 		selectableObjectsRef.current.push(cube);
 
 		if (!todosObjetosRef.current.includes(cube)) {
-        	todosObjetosRef.current.push(cube);
+			todosObjetosRef.current.push(cube);
 		}
-		
+		if (filtroMarcador) {
+			const shouldShow = cube.userData?.dadosOriginais?.id === filtroMarcador.id;
+			cube.visible = shouldShow;
+			destacarObjeto(cube, shouldShow);
+		}
+
 	};
 
 	const calcularPosicaoRelativa = (posicaoAR) => {
@@ -578,44 +577,44 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 		}
 	};
 
-return (
-  <div
-    ref={containerRef}
-    style={{
-      position: "fixed",
-      top: 0,
-      left: 0,
-      width: "100%",
-      height: "100%",
-      zIndex: 1,
-    }}
-  >
-    {mode === "user" && marcadoresDisponiveis?.length > 0 && (
-      <div className="filtro-overlay" style={{
-        position: "absolute",
-        top: "10px",
-        left: "10px",
-        zIndex: 10,
-        background: "rgba(0,0,0,0.5)",
-        padding: "8px",
-        borderRadius: "8px"
-      }}>
-        <button onClick={() => setFiltroAtivo(null)}>
-          Mostrar todos
-        </button>
-        {marcadoresDisponiveis.map((m) => (
-          <button
-            key={m.id}
-            className={filtroMarcador?.id === m.id ? "ativo" : ""}
-            onClick={() => setFiltroAtivo(m)}
-          >
-            {m.nome}
-          </button>
-        ))}
-      </div>
-    )}
-  </div>
-);
+	return (
+		<div
+			ref={containerRef}
+			style={{
+				position: "fixed",
+				top: 0,
+				left: 0,
+				width: "100%",
+				height: "100%",
+				zIndex: 1,
+			}}
+		>
+			{mode === "user" && marcadoresDisponiveis?.length > 0 && (
+				<div className="filtro-overlay" style={{
+					position: "absolute",
+					top: "10px",
+					left: "10px",
+					zIndex: 10,
+					background: "rgba(0,0,0,0.5)",
+					padding: "8px",
+					borderRadius: "8px"
+				}}>
+					<button onClick={() => setFiltroAtivo(null)}>
+						Mostrar todos
+					</button>
+					{marcadoresDisponiveis.map((m) => (
+						<button
+							key={m.id}
+							className={filtroMarcador?.id === m.id ? "ativo" : ""}
+							onClick={() => setFiltroAtivo(m)}
+						>
+							{m.nome}
+						</button>
+					))}
+				</div>
+			)}
+		</div>
+	);
 }
 
 
