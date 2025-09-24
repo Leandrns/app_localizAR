@@ -25,19 +25,57 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	const [currentPrize, setCurrentPrize] = useState(null);
 	const clickCounterRef = useRef(new Map()); // Map para contar cliques por objeto
 
-	// Lista de prêmios possíveis
-	const prizes = [
-		{ name: "Desconto de 10%", description: "10% de desconto na próxima compra", icon: "🎟️" },
-		{ name: "Brinde Especial", description: "Ganhe um brinde exclusivo do evento", icon: "🎁" },
-		{ name: "Entrada VIP", description: "Acesso VIP para a próxima área", icon: "⭐" },
-		{ name: "Drink Grátis", description: "Uma bebida cortesia no bar", icon: "🍹" },
-		{ name: "Foto Premium", description: "Sessão de fotos profissional gratuita", icon: "📸" },
-		{ name: "Sorteio Duplo", description: "Participe do sorteio com chance dupla", icon: "🍀" },
-		{ name: "Acesso Backstage", description: "Visite o backstage do evento", icon: "🎭" },
-		{ name: "Mesa Reservada", description: "Mesa reservada na área premium", icon: "🪑" },
-		{ name: "Kit Exclusivo", description: "Kit de produtos exclusivos", icon: "📦" },
-		{ name: "Experiência Plus", description: "Upgrade para experiência premium", icon: "✨" }
-	];
+	// Sistema de prêmios com probabilidades por raridade
+	const prizeSystem = {
+		// Prêmios Comuns (60% de chance total)
+		comum: {
+			probability: 0.60,
+			prizes: [
+				{ name: "Desconto de 5%", description: "5% de desconto na próxima compra", icon: "🎟️", rarity: "Comum" },
+				{ name: "Brinde Simples", description: "Ganhe um brinde básico do evento", icon: "🎁", rarity: "Comum" },
+				{ name: "Drink com Desconto", description: "20% de desconto em bebidas", icon: "🥤", rarity: "Comum" },
+				{ name: "Mapa do Evento", description: "Mapa físico premium do evento", icon: "🗺️", rarity: "Comum" },
+			]
+		},
+		// Prêmios Raros (25% de chance total)
+		raro: {
+			probability: 0.25,
+			prizes: [
+				{ name: "Desconto de 15%", description: "15% de desconto na próxima compra", icon: "🎫", rarity: "Raro" },
+				{ name: "Brinde Especial", description: "Ganhe um brinde exclusivo do evento", icon: "🎁", rarity: "Raro" },
+				{ name: "Drink Grátis", description: "Uma bebida cortesia no bar", icon: "🍹", rarity: "Raro" },
+				{ name: "Foto Premium", description: "Sessão de fotos profissional gratuita", icon: "📸", rarity: "Raro" },
+				{ name: "Mesa Reservada", description: "Mesa reservada na área premium", icon: "🪑", rarity: "Raro" },
+			]
+		},
+		// Prêmios Épicos (12% de chance total)
+		epico: {
+			probability: 0.12,
+			prizes: [
+				{ name: "Desconto de 25%", description: "25% de desconto na próxima compra", icon: "💳", rarity: "Épico" },
+				{ name: "Entrada VIP", description: "Acesso VIP para a próxima área", icon: "⭐", rarity: "Épico" },
+				{ name: "Kit Exclusivo", description: "Kit de produtos exclusivos", icon: "📦", rarity: "Épico" },
+				{ name: "Experiência Plus", description: "Upgrade para experiência premium", icon: "✨", rarity: "Épico" },
+			]
+		},
+		// Prêmios Lendários (3% de chance total)
+		lendario: {
+			probability: 0.03,
+			prizes: [
+				{ name: "Desconto de 50%", description: "50% de desconto na próxima compra", icon: "💎", rarity: "Lendário" },
+				{ name: "Acesso Backstage", description: "Visite o backstage do evento", icon: "🎭", rarity: "Lendário" },
+				{ name: "Experiência VIP Completa", description: "Acesso total VIP + brindes exclusivos", icon: "👑", rarity: "Lendário" },
+			]
+		}
+	};
+
+	// Cores para cada raridade
+	const rarityColors = {
+		"Comum": "#95a5a6",
+		"Raro": "#3498db",
+		"Épico": "#9b59b6",
+		"Lendário": "#f1c40f"
+	};
 
 	useEffect(() => {
 		if (calibrado && containerRef.current) {
@@ -157,10 +195,28 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		clickCounterRef.current.clear();
 	};
 
-	// Função para gerar prêmio aleatório
-	const generateRandomPrize = () => {
-		const randomIndex = Math.floor(Math.random() * prizes.length);
-		return prizes[randomIndex];
+	// Função para gerar prêmio baseado em probabilidade
+	const generatePrizeByProbability = () => {
+		const random = Math.random();
+		let cumulativeProbability = 0;
+
+		// Verificar cada categoria de raridade em ordem (lendário -> épico -> raro -> comum)
+		const rarityOrder = ['lendario', 'epico', 'raro', 'comum'];
+		
+		for (const rarity of rarityOrder) {
+			cumulativeProbability += prizeSystem[rarity].probability;
+			
+			if (random <= cumulativeProbability) {
+				// Selecionar um prêmio aleatório desta raridade
+				const prizes = prizeSystem[rarity].prizes;
+				const randomIndex = Math.floor(Math.random() * prizes.length);
+				return prizes[randomIndex];
+			}
+		}
+
+		// Fallback - retorna um prêmio comum caso algo dê errado
+		const commonPrizes = prizeSystem.comum.prizes;
+		return commonPrizes[Math.floor(Math.random() * commonPrizes.length)];
 	};
 
 	// Handler único para select — cria ponto no admin, dispara flip no visitante
@@ -257,9 +313,12 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 					// Resetar contador para este objeto
 					clickCounterRef.current.set(objectId, 0);
 					
-					// Gerar prêmio aleatório
-					const prize = generateRandomPrize();
+					// Gerar prêmio baseado em probabilidade
+					const prize = generatePrizeByProbability();
 					setCurrentPrize(prize);
+					
+					// Log para debug (opcional)
+					console.log(`🎁 Prêmio gerado: ${prize.name} (${prize.rarity})`);
 					
 					// Mostrar modal após um pequeno delay para a animação terminar
 					setTimeout(() => {
@@ -561,7 +620,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 				}}
 			/>
 
-			{/* Modal de Prêmio */}
+			{/* Modal de Prêmio Aprimorado */}
 			{showPrizeModal && currentPrize && (
 				<div 
 					style={{
@@ -570,7 +629,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 						left: 0,
 						width: "100%",
 						height: "100%",
-						backgroundColor: "rgba(0, 0, 0, 0.8)",
+						backgroundColor: "rgba(0, 0, 0, 0.9)",
 						display: "flex",
 						justifyContent: "center",
 						alignItems: "center",
@@ -581,39 +640,80 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 					<div 
 						style={{
 							backgroundColor: "#1e1e1e",
-							border: "2px solid #4ecdc4",
-							borderRadius: "16px",
-							padding: "30px",
+							border: `3px solid ${rarityColors[currentPrize.rarity]}`,
+							borderRadius: "20px",
+							padding: "35px",
 							textAlign: "center",
-							maxWidth: "400px",
+							maxWidth: "420px",
 							width: "100%",
 							color: "#fff",
-							boxShadow: "0 8px 32px rgba(0, 0, 0, 0.5)"
+							boxShadow: `0 8px 32px ${rarityColors[currentPrize.rarity]}40`,
+							position: "relative",
+							overflow: "hidden"
 						}}
 					>
-						<div style={{ fontSize: "60px", marginBottom: "15px" }}>
+						{/* Efeito de brilho para prêmios épicos e lendários */}
+						{(currentPrize.rarity === "Épico" || currentPrize.rarity === "Lendário") && (
+							<div style={{
+								position: "absolute",
+								top: "-50%",
+								left: "-50%",
+								width: "200%",
+								height: "200%",
+								background: `conic-gradient(from 0deg, transparent, ${rarityColors[currentPrize.rarity]}30, transparent)`,
+								animation: "rotate 3s linear infinite",
+								pointerEvents: "none"
+							}} />
+						)}
+						
+						{/* Badge de Raridade */}
+						<div style={{
+							position: "absolute",
+							top: "15px",
+							right: "15px",
+							backgroundColor: rarityColors[currentPrize.rarity],
+							color: "#000",
+							padding: "4px 12px",
+							borderRadius: "20px",
+							fontSize: "12px",
+							fontWeight: "bold",
+							textTransform: "uppercase",
+							zIndex: 1
+						}}>
+							{currentPrize.rarity}
+						</div>
+						
+						<div style={{ fontSize: "70px", marginBottom: "15px", zIndex: 1, position: "relative" }}>
 							🎉
 						</div>
 						
 						<h2 style={{ 
-							color: "#4ecdc4", 
-							marginBottom: "10px",
-							fontSize: "24px"
+							color: rarityColors[currentPrize.rarity], 
+							marginBottom: "15px",
+							fontSize: "26px",
+							zIndex: 1,
+							position: "relative"
 						}}>
-							Parabéns!
+							{currentPrize.rarity === "Lendário" ? "INCRÍVEL!" : 
+							 currentPrize.rarity === "Épico" ? "FANTÁSTICO!" : 
+							 currentPrize.rarity === "Raro" ? "PARABÉNS!" : "Você ganhou!"}
 						</h2>
 						
 						<div style={{ 
-							fontSize: "40px", 
-							marginBottom: "15px" 
+							fontSize: "50px", 
+							marginBottom: "20px",
+							zIndex: 1,
+							position: "relative"
 						}}>
 							{currentPrize.icon}
 						</div>
 						
 						<h3 style={{ 
 							color: "#fff", 
-							marginBottom: "10px",
-							fontSize: "20px"
+							marginBottom: "12px",
+							fontSize: "22px",
+							zIndex: 1,
+							position: "relative"
 						}}>
 							{currentPrize.name}
 						</h3>
@@ -621,49 +721,60 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 						<p style={{ 
 							color: "#a0a0a0", 
 							marginBottom: "25px",
-							lineHeight: "1.4"
+							lineHeight: "1.5",
+							zIndex: 1,
+							position: "relative"
 						}}>
 							{currentPrize.description}
 						</p>
+
+						{/* Informações de probabilidade */}
+						<div style={{
+							backgroundColor: "rgba(0, 0, 0, 0.3)",
+							padding: "10px",
+							borderRadius: "8px",
+							marginBottom: "25px",
+							fontSize: "14px",
+							color: "#888",
+							zIndex: 1,
+							position: "relative"
+						}}>
+							{currentPrize.rarity === "Lendário" && "Chance: 3% - Extremamente raro! 💎"}
+							{currentPrize.rarity === "Épico" && "Chance: 12% - Muito raro! ⭐"}
+							{currentPrize.rarity === "Raro" && "Chance: 25% - Raro! 🔮"}
+							{currentPrize.rarity === "Comum" && "Chance: 60% - Comum 📋"}
+						</div>
 						
 						<button
 							onClick={closePrizeModal}
 							style={{
-								backgroundColor: "#4ecdc4",
-								color: "#1e1e1e",
+								backgroundColor: rarityColors[currentPrize.rarity],
+								color: "#000",
 								border: "none",
-								padding: "12px 30px",
-								borderRadius: "8px",
+								padding: "14px 35px",
+								borderRadius: "10px",
 								fontSize: "16px",
 								fontWeight: "bold",
 								cursor: "pointer",
-								transition: "all 0.2s ease"
+								transition: "all 0.3s ease",
+								textTransform: "uppercase",
+								zIndex: 1,
+								position: "relative"
 							}}
 							onMouseOver={(e) => {
-								e.target.style.backgroundColor = "#45b7aa";
 								e.target.style.transform = "scale(1.05)";
+								e.target.style.boxShadow = `0 4px 20px ${rarityColors[currentPrize.rarity]}60`;
 							}}
 							onMouseOut={(e) => {
-								e.target.style.backgroundColor = "#4ecdc4";
 								e.target.style.transform = "scale(1)";
-							}}
-						>
-							Resgatar Prêmio
-						</button>
-						
-						<p style={{ 
-							fontSize: "12px", 
-							color: "#666", 
-							marginTop: "15px",
-							marginBottom: "0"
-						}}>
-							Mostre esta tela no balcão de atendimento
-						</p>
+								e.target.style.boxShadow = "none";
+							}}></button>
+						</div>
 					</div>
-				</div>
-			)}
+				)
+			}
 		</>
-	);
+	)
 }
 
-export default ARView;
+export default ARView
