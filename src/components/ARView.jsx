@@ -37,6 +37,22 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 		}
 	}, [filtroMarcador, mode, calibrado]);
 
+	useEffect(() => {
+		if (!todosObjetosRef.current) return;
+
+		todosObjetosRef.current.forEach((obj) => {
+			if (filtroMarcador) {
+				const shouldShow = obj.userData?.dadosOriginais?.id === filtroMarcador.id;
+				obj.visible = shouldShow;
+				destacarObjeto(obj, shouldShow);
+			} else {
+				obj.visible = true;
+				destacarObjeto(obj, false);
+			}
+		});
+	}, [filtroMarcador]);
+
+
 	const aplicarFiltroVisualizacao = () => {
 		todosObjetosRef.current.forEach((obj) => {
 			if (filtroMarcador) {
@@ -388,7 +404,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 					todosObjetosRef.current.push(model);
 				}
 				// Sempre aplicar filtro após adicionar
-				aplicarFiltroVisualizacao();
+				
 			},
 			undefined,
 			(error) => {
@@ -424,7 +440,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 		if (!todosObjetosRef.current.includes(cube)) {
         	todosObjetosRef.current.push(cube);
 		}
-		aplicarFiltroVisualizacao();
+		
 	};
 
 	const calcularPosicaoRelativa = (posicaoAR) => {
