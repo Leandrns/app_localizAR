@@ -174,7 +174,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		const group = new THREE.Group();
 
 		// Painel de fundo
-		const panelGeometry = new THREE.PlaneGeometry(2, 1.2);
+		const panelGeometry = new THREE.PlaneGeometry(1, 0.6);
 		const panelMaterial = new THREE.MeshBasicMaterial({
 			color: 0x1e1e1e,
 			transparent: true,
@@ -184,21 +184,21 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		group.add(panel);
 
 		// Borda do painel
-		const borderGeometry = new THREE.RingGeometry(0.95, 1, 32);
-		const borderMaterial = new THREE.MeshBasicMaterial({
-			color: 0x4ecdc4,
-			transparent: true,
-			opacity: 0.8
-		});
-		const border = new THREE.Mesh(borderGeometry, borderMaterial);
-		border.position.z = 0.01;
-		group.add(border);
+		// const borderGeometry = new THREE.RingGeometry(0.95, 1, 32);
+		// const borderMaterial = new THREE.MeshBasicMaterial({
+		// 	color: 0x4ecdc4,
+		// 	transparent: true,
+		// 	opacity: 0.8
+		// });
+		// const border = new THREE.Mesh(borderGeometry, borderMaterial);
+		// border.position.z = 0.01;
+		// group.add(border);
 
 		// Canvas para texto
 		const canvas = document.createElement('canvas');
 		const context = canvas.getContext('2d');
-		canvas.width = 512;
-		canvas.height = 256;
+		canvas.width = 256;
+		canvas.height = 128;
 
 		// Fundo do canvas
 		context.fillStyle = 'rgba(30, 30, 30, 0)';
@@ -273,7 +273,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		const camera = cameraRef.current;
 		if (camera) {
 			group.position.copy(camera.position);
-			group.position.add(camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(-1.5));
+			group.position.add(camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(1.5));
 			group.position.y += 0.5;
 			group.lookAt(camera.position);
 		}
