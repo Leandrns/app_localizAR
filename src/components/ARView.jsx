@@ -310,24 +310,32 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 
 				// Verificar se atingiu 3 cliques
 				if (newClickCount >= 3) {
-					// Feedback visual: piscar mudando cor
-					const materials = Array.isArray(root.material) ? root.material : [root.material];
+					// Função recursiva para aplicar o piscar em todos os Meshes do objeto
+					const applyBlink = (obj) => {
+						obj.traverse((child) => {
+							if (child.isMesh && child.material) {
+								const materials = Array.isArray(child.material) ? child.material : [child.material];
+								materials.forEach((mat) => {
+									if (mat && mat.color) {
+										let flashes = 0;
+										const originalColor = mat.color.clone();
+										const flashColor = new THREE.Color(0xffff00);
 
-					materials.forEach((mat) => {
-						let flashes = 0;
-						const originalColor = mat.color.clone();
-						const flashColor = new THREE.Color(0xffff00); // amarelo forte
-
-						const interval = setInterval(() => {
-							mat.color.copy(flashes % 2 === 0 ? flashColor : originalColor);
-							flashes++;
-							if (flashes > 5) { // 3 piscadas
-								clearInterval(interval);
-								mat.color.copy(originalColor);
+										const interval = setInterval(() => {
+											mat.color.copy(flashes % 2 === 0 ? flashColor : originalColor);
+											flashes++;
+											if (flashes > 5) { // 3 piscadas
+												clearInterval(interval);
+												mat.color.copy(originalColor);
+											}
+										}, 150);
+									}
+								});
 							}
-						}, 150);
-					});
+						});
+					};
 
+					applyBlink(root);
 					// Resetar contador para este objeto
 					clickCounterRef.current.set(objectId, 0);
 					
