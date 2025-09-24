@@ -311,31 +311,46 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 				// Verificar se atingiu 3 cliques
 				if (newClickCount >= 3) {
 					// Função recursiva para aplicar o piscar em todos os Meshes do objeto
-					const applyBlink = (obj) => {
+					    const applyBlinkSmooth = (obj) => {
 						obj.traverse((child) => {
 							if (child.isMesh && child.material) {
 								const materials = Array.isArray(child.material) ? child.material : [child.material];
 								materials.forEach((mat) => {
 									if (mat && mat.color) {
-										let flashes = 0;
 										const originalColor = mat.color.clone();
-										const flashColor = new THREE.Color(0xffff00);
+										const flashColor = new THREE.Color(0xffffff); // branco
+										let flashes = 0;
+										let direction = 1; // 1 = indo para flashColor, -1 = voltando
+										let progress = 0;
 
 										const interval = setInterval(() => {
-											mat.color.copy(flashes % 2 === 0 ? flashColor : originalColor);
-											flashes++;
-											if (flashes > 5) { // 3 piscadas
-												clearInterval(interval);
-												mat.color.copy(originalColor);
+											progress += direction * 0.1; // velocidade da transição
+											if (progress >= 1) {
+												progress = 1;
+												direction = -1;
+												flashes++;
+											} else if (progress <= 0) {
+												progress = 0;
+												direction = 1;
+												flashes++;
 											}
-										}, 150);
+
+											// Interpola entre original e flash
+											mat.color.lerpColors(originalColor, flashColor, progress);
+
+											if (flashes >= 6) { // 3 ciclos (ida e volta)
+												clearInterval(interval);
+												mat.color.copy(originalColor); // garante que volte ao normal
+											}
+										}, 50); // intervalo de atualização (ms)
 									}
 								});
 							}
 						});
 					};
 
-					applyBlink(root);
+					applyBlinkSmooth(root);
+
 					// Resetar contador para este objeto
 					clickCounterRef.current.set(objectId, 0);
 					
