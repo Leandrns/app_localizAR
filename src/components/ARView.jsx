@@ -314,20 +314,18 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 					const materials = Array.isArray(root.material) ? root.material : [root.material];
 
 					materials.forEach((mat) => {
-						if (mat && mat.color) {
-							let flashes = 0;
-							const originalColor = mat.color.clone();
-							const flashColor = new THREE.Color(0xffff00); // amarelo forte
+						let flashes = 0;
+						const originalColor = mat.color.clone();
+						const flashColor = new THREE.Color(0xffff00); // amarelo forte
 
-							const interval = setInterval(() => {
-								mat.color.copy(flashes % 2 === 0 ? flashColor : originalColor);
-								flashes++;
-								if (flashes > 5) { // 3 piscadas
-									clearInterval(interval);
-									mat.color.copy(originalColor);
-								}
-							}, 150);
-						}
+						const interval = setInterval(() => {
+							mat.color.copy(flashes % 2 === 0 ? flashColor : originalColor);
+							flashes++;
+							if (flashes > 5) { // 3 piscadas
+								clearInterval(interval);
+								mat.color.copy(originalColor);
+							}
+						}, 150);
 					});
 
 					// Resetar contador para este objeto
