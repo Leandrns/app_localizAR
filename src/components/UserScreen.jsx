@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from '../supabaseClient';
 import QRScanner from "./QRScanner";
 import ARView from "./ARView";
 import "../styles/user.css";
