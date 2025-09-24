@@ -326,7 +326,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 											// Interpola entre original e flash
 											mat.color.lerpColors(originalColor, flashColor, progress);
 
-											if (flashes >= 2) { // 1 ciclo (ida e volta)
+											if (flashes >= 4) { // 2 ciclo (ida e volta)
 												clearInterval(interval);
 												mat.color.copy(originalColor); // garante que volte ao normal
 											}
