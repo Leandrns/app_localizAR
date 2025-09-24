@@ -4,7 +4,7 @@ import { ARButton } from "three/examples/jsm/webxr/ARButton.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { supabase } from '../supabaseClient'
 
-function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtroMarcador, marcadoresDisponiveis, setFiltroAtivo }) {
+function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	const containerRef = useRef(null);
 	const sceneRef = useRef(null);
 	const rendererRef = useRef(null);
@@ -19,7 +19,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 	const tempMatrixRef = useRef(new THREE.Matrix4());
 	const flipAnimationsRef = useRef([]); // animações ativas
 	const lastTimestampRef = useRef(0);
-	const todosObjetosRef = useRef([]);
 
 	useEffect(() => {
 		if (calibrado && containerRef.current) {
@@ -30,53 +29,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 			cleanup();
 		};
 	}, [calibrado, mode]);
-
-
-	useEffect(() => {
-		if (todosObjetosRef.current.length > 0) {
-			aplicarFiltroVisualizacao();
-		}
-	}, [filtroMarcador]);
-
-
-
-	const aplicarFiltroVisualizacao = () => {
-		selectableObjectsRef.current = [];
-
-		todosObjetosRef.current.forEach((obj) => {
-			let shouldShow = true;
-
-			if (filtroMarcador) {
-				shouldShow = obj.userData?.dadosOriginais?.id === filtroMarcador.id;
-			}
-
-			obj.visible = shouldShow;
-			destacarObjeto(obj, shouldShow);
-
-			if (shouldShow) {
-				selectableObjectsRef.current.push(obj);
-			}
-		});
-	};
-
-	// NOVA FUNÇÃO: Destaca/remove destaque de um objeto
-	const destacarObjeto = (objeto, destacar) => {
-		objeto.traverse((child) => {
-			if (child.isMesh && child.material) {
-				if (destacar) {
-					// Aplica cor de destaque (amarelo/dourado)
-					child.material.color.setHex(0xffdd44);
-					child.material.emissive.setHex(0x442200);
-				} else {
-					// Restaura cor original (se havia uma cor armazenada)
-					if (child.userData?.corOriginal) {
-						child.material.color.copy(child.userData.corOriginal);
-						child.material.emissive.setHex(0x000000);
-					}
-				}
-			}
-		});
-	};
 
 	const initAR = () => {
 		const container = containerRef.current;
@@ -164,9 +116,8 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 					pontoReferencia.arPosition = new THREE.Vector3(0, 0, 0);
 				}
 
-				// Limpar objetos antigos antes de carregar
+				// Carregar pontos salvos
 				setTimeout(() => {
-					limparObjetosAR();
 					carregarPontosSalvos();
 				}, 1000);
 			}
@@ -183,7 +134,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 		flipAnimationsRef.current = [];
 		lastTimestampRef.current = 0;
 		selectableObjectsRef.current = [];
-		todosObjetosRef.current = [];
 	};
 
 	// Handler único para select — cria ponto no admin, dispara flip no visitante
@@ -267,7 +217,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 				if (!root.userData) root = selected;
 
 				// Iniciar animação de flip (rotaciona em X)
-				startFlipAnimation(root, { axis: "y", degree: (2 * Math.PI), duration: 600 });
+				startFlipAnimation(root, { axis: "y", degree: (2*Math.PI), duration: 600 });
 			}
 		}
 	};
@@ -345,12 +295,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 
 				criarModeloCarregado(posicaoAbsoluta, ponto, index);
 			});
-
-			setTimeout(() => {
-				aplicarFiltroVisualizacao();
-			}, 500);
-
-
 		} catch (err) {
 			console.error("Erro inesperado ao buscar pontos:", err);
 		}
@@ -367,13 +311,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 
 				model.userData = {
 					carregado: true,
-					dadosOriginais: {
-						id: dadosPonto.id,
-						nome: dadosPonto.nome,
-						pos_x: dadosPonto.pos_x,
-						pos_y: dadosPonto.pos_y,
-						pos_z: dadosPonto.pos_z
-					}
+					dadosOriginais: dadosPonto,
 				};
 
 				const cor = new THREE.Color().setHSL(Math.random(), 0.7, 0.5);
@@ -382,22 +320,12 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 					if (child.isMesh) {
 						if (child.material) child.material = child.material.clone();
 						child.material.color = cor;
-						child.userData = { corOriginal: cor.clone() };
 					}
 				});
 
 				sceneRef.current.add(model);
 				// adiciona ao array de selecionáveis
 				selectableObjectsRef.current.push(model);
-				if (!todosObjetosRef.current.includes(model)) {
-					todosObjetosRef.current.push(model);
-				}
-				if (filtroMarcador) {
-					const shouldShow = model.userData?.dadosOriginais?.id === filtroMarcador.id;
-					model.visible = shouldShow;
-					destacarObjeto(model, shouldShow);
-				}
-
 			},
 			undefined,
 			(error) => {
@@ -406,7 +334,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 				criarCuboCarregado(posicao, dadosPonto, index);
 			}
 		);
-
 	};
 
 	const criarCuboCarregado = (posicao, dadosPonto, index) => {
@@ -428,16 +355,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 
 		sceneRef.current.add(cube);
 		selectableObjectsRef.current.push(cube);
-
-		if (!todosObjetosRef.current.includes(cube)) {
-			todosObjetosRef.current.push(cube);
-		}
-		if (filtroMarcador) {
-			const shouldShow = cube.userData?.dadosOriginais?.id === filtroMarcador.id;
-			cube.visible = shouldShow;
-			destacarObjeto(cube, shouldShow);
-		}
-
 	};
 
 	const calcularPosicaoRelativa = (posicaoAR) => {
@@ -587,34 +504,8 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 				height: "100%",
 				zIndex: 1,
 			}}
-		>
-			{mode === "user" && marcadoresDisponiveis?.length > 0 && (
-				<div className="filtro-overlay" style={{
-					position: "absolute",
-					top: "10px",
-					left: "10px",
-					zIndex: 10,
-					background: "rgba(0,0,0,0.5)",
-					padding: "8px",
-					borderRadius: "8px"
-				}}>
-					<button onClick={() => setFiltroAtivo(null)}>
-						Mostrar todos
-					</button>
-					{marcadoresDisponiveis.map((m) => (
-						<button
-							key={m.id}
-							className={filtroMarcador?.id === m.id ? "ativo" : ""}
-							onClick={() => setFiltroAtivo(m)}
-						>
-							{m.nome}
-						</button>
-					))}
-				</div>
-			)}
-		</div>
+		/>
 	);
 }
-
 
 export default ARView;

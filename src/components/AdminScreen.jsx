@@ -58,22 +58,12 @@ function AdminScreen({
 	};
 
 	const handleCreatePoint = async (posicaoRelativa) => {
-
-		const nomeMarcador = prompt("Digite um nome para este marcador:");
-		
-		// Verifica se o usuário cancelou ou deixou vazio
-		if (!nomeMarcador || nomeMarcador.trim() === "") {
-			alert("Nome do marcador é obrigatório. Marcador não foi criado.");
-			return;
-		}
-
 		const novoPonto = {
 			id: generateId(),
 			posicaoRelativa: posicaoRelativa,
 			qrReferencia: pontoReferencia.qrCode,
 			timestamp: Date.now(),
 			criadoPor: "admin",
-			nome: nomeMarcador.trim(),
 		};
 
 		updatePontos(novoPonto);
@@ -87,7 +77,6 @@ function AdminScreen({
 			pos_z: posicaoRelativa.z,
 			qr_referencia: novoPonto.qrReferencia,
 			created_by: novoPonto.criadoPor,
-			nome: novoPonto.nome,
 		});
 
 		if (error) {
