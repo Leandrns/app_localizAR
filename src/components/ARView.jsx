@@ -310,15 +310,28 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 
 				// Verificar se atingiu 3 cliques
 				if (newClickCount >= 3) {
+					// Feedback visual: piscar
+					const material = root.material;
+					if (material) {
+						let flashes = 0;
+						const originalColor = material.color.clone();
+						const flashColor = new THREE.Color(0xffff00); // amarelo forte
+						const interval = setInterval(() => {
+							material.color.copy(flashes % 2 === 0 ? flashColor : originalColor);
+							flashes++;
+							if (flashes > 5) { // pisca 3 vezes (6 trocas)
+								clearInterval(interval);
+								material.color.copy(originalColor);
+							}
+						}, 150); // intervalo em ms
+					}
+					
 					// Resetar contador para este objeto
 					clickCounterRef.current.set(objectId, 0);
 					
 					// Gerar prêmio baseado em probabilidade
 					const prize = generatePrizeByProbability();
 					setCurrentPrize(prize);
-					
-					// Log para debug (opcional)
-					console.log(`🎁 Prêmio gerado: ${prize.name} (${prize.rarity})`);
 					
 					// Mostrar modal após um pequeno delay para a animação terminar
 					setTimeout(() => {
