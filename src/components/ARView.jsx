@@ -432,7 +432,9 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 
 				sceneRef.current.add(model);
 				// adiciona ao array de selecionáveis
-				selectableObjectsRef.current.push(model);
+				if (Math.random() > 0.5) {
+					selectableObjectsRef.current.push(model);
+				}
 			},
 			undefined,
 			(error) => {
