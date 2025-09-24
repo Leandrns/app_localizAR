@@ -38,8 +38,11 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 	// ✅ useEffect para recarregar pontos quando filtro mudar (só no modo user)
 	useEffect(() => {
 		if (mode === "user" && calibrado && pontoReferencia && sceneRef.current) {
-			console.log(`Aplicando filtro: ${filtroAtivo || 'todos'}`);
-			carregarPontosSalvos();
+			console.log(`🔄 Aplicando filtro: ${filtroAtivo || 'todos'}`);
+			// ✅ Delay para garantir que a sessão AR esteja ativa
+			setTimeout(() => {
+				carregarPontosSalvos();
+			}, 500);
 		}
 	}, [filtroAtivo, mode, calibrado, pontoReferencia]);
 
@@ -101,10 +104,14 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 		controllerRef.current = controller;
 		scene.add(controller);
 
-		// ✅ NOVO: Event listener para toques na tela (modo visitante)
+		// ✅ Event listener para toques na tela (modo visitante)
 		if (mode === "user") {
-			renderer.domElement.addEventListener('touchstart', onTouchStart, false);
-			renderer.domElement.addEventListener('click', onTouchStart, false);
+			const handleTouchStart = (event) => onTouchStart(event);
+			renderer.domElement.addEventListener('touchstart', handleTouchStart, { passive: false });
+			renderer.domElement.addEventListener('click', handleTouchStart, { passive: false });
+			
+			// ✅ Armazenar referência para cleanup
+			renderer.domElement._touchHandler = handleTouchStart;
 		}
 
 		// Event listeners
@@ -116,6 +123,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 	};
 
 	const onSessionStart = () => {
+		console.log("🚀 Sessão AR iniciada");
 		const renderer = rendererRef.current;
 		if (!renderer) return;
 
@@ -129,21 +137,24 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 
 		session.requestReferenceSpace("local").then((refSpace) => {
 			localReferenceSpaceRef.current = refSpace;
+			console.log("📍 Reference space local obtido");
 
 			if (calibrado && pontoReferencia) {
 				if (!pontoReferencia.arPosition) {
 					pontoReferencia.arPosition = new THREE.Vector3(0, 0, 0);
 				}
 
-				// Carregar pontos salvos
+				// ✅ Carregar pontos salvos com delay maior para garantir estabilidade
+				console.log(`⏱️ Carregando pontos em 2 segundos para modo: ${mode}`);
 				setTimeout(() => {
 					carregarPontosSalvos();
-				}, 1000);
+				}, 2000);
 			}
 		});
 	};
 
 	const onSessionEnd = () => {
+		console.log("🛑 Sessão AR finalizada");
 		hitTestSourceRef.current = null;
 		localReferenceSpaceRef.current = null;
 		if (reticleRef.current) {
@@ -154,28 +165,31 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 		lastTimestampRef.current = 0;
 		selectableObjectsRef.current = [];
 		
-		// ✅ Remover event listeners
+		// ✅ Remover event listeners usando referência armazenada
 		const renderer = rendererRef.current;
-		if (renderer && renderer.domElement) {
-			renderer.domElement.removeEventListener('touchstart', onTouchStart, false);
-			renderer.domElement.removeEventListener('click', onTouchStart, false);
+		if (renderer && renderer.domElement && renderer.domElement._touchHandler) {
+			renderer.domElement.removeEventListener('touchstart', renderer.domElement._touchHandler, { passive: false });
+			renderer.domElement.removeEventListener('click', renderer.domElement._touchHandler, { passive: false });
+			delete renderer.domElement._touchHandler;
 		}
 	};
 
-	// ✅ NOVO: Handler para toques na tela (modo visitante) 
+	// ✅ Handler para toques na tela (modo visitante) 
 	const onTouchStart = (event) => {
-		if (mode !== "user" || showNameModal) return; // ✅ Não processar se modal estiver aberto
+		if (mode !== "user" || showNameModal) return;
 		
 		event.preventDefault();
 		
 		// Pegar coordenadas do toque
 		let clientX, clientY;
-		if (event.type === 'touchstart') {
+		if (event.type === 'touchstart' && event.touches && event.touches.length > 0) {
 			clientX = event.touches[0].clientX;
 			clientY = event.touches[0].clientY;
-		} else {
+		} else if (event.type === 'click') {
 			clientX = event.clientX;
 			clientY = event.clientY;
+		} else {
+			return; // Evento inválido
 		}
 		
 		// Converter para coordenadas normalizadas (-1 a 1)
@@ -202,7 +216,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 				
 				if (targetObject.userData.carregado) {
 					console.log(`🎯 Clicou no ponto: ${targetObject.userData.dadosOriginais.nome || 'Sem nome'}`);
-					startFlipAnimation(targetObject, { axis: "z", degree: Math.PI * 2, duration: 800 });
+					startFlipAnimation(targetObject, { axis: "y", degree: Math.PI * 2, duration: 800 });
 				}
 			}
 		}
@@ -210,63 +224,65 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 
 	// Handler para select (criar ponto no admin)
 	const onSelect = () => {
-    if (mode !== "admin") return;
-    if (!calibrado) {
-        alert("Faça a calibração primeiro!");
-        return;
-    }
-    if (!reticleRef.current || !reticleRef.current.visible) return;
+		if (mode !== "admin") return;
+		if (!calibrado) {
+			alert("Faça a calibração primeiro!");
+			return;
+		}
+		if (!reticleRef.current || !reticleRef.current.visible) return;
 
-    const position = new THREE.Vector3();
-    position.setFromMatrixPosition(reticleRef.current.matrix);
-    const posicaoRelativa = calcularPosicaoRelativa(position);
+		const position = new THREE.Vector3();
+		position.setFromMatrixPosition(reticleRef.current.matrix);
+		const posicaoRelativa = calcularPosicaoRelativa(position);
 
-    // Solicitar nome imediatamente
-    const nomeDoPonto = prompt("Digite o nome do marcador:");
-    if (!nomeDoPonto || !nomeDoPonto.trim()) return;
+		// Solicitar nome imediatamente
+		const nomeDoPonto = prompt("Digite o nome do marcador:");
+		if (!nomeDoPonto || !nomeDoPonto.trim()) return;
 
-    // Criar modelo 3D com nome
-    loaderRef.current.load(
-        "/map_pointer_3d_icon.glb",
-        (gltf) => {
-            const model = gltf.scene;
-            model.position.copy(position);
-            model.position.y += 1;
-            model.scale.set(0.1, 0.1, 0.1);
+		// Criar modelo 3D com nome
+		loaderRef.current.load(
+			"/map_pointer_3d_icon.glb",
+			(gltf) => {
+				const model = gltf.scene;
+				model.position.copy(position);
+				model.position.y += 1;
+				model.scale.set(0.1, 0.1, 0.1);
 
-            model.userData = {
-                carregado: true,
-                dadosOriginais: posicaoRelativa,
-                nome: nomeDoPonto.trim()
-            };
+				model.userData = {
+					carregado: true,
+					dadosOriginais: { ...posicaoRelativa, nome: nomeDoPonto.trim() },
+					nome: nomeDoPonto.trim()
+				};
 
-            const cor = new THREE.Color().setHSL(Math.random(), 0.7, 0.5);
-            model.traverse((child) => {
-                if (child.isMesh) {
-                    if (child.material) child.material = child.material.clone();
-                    child.material.color = cor;
-                }
-            });
+				const cor = new THREE.Color().setHSL(Math.random(), 0.7, 0.5);
+				model.traverse((child) => {
+					if (child.isMesh) {
+						if (child.material) child.material = child.material.clone();
+						child.material.color = cor;
+					}
+				});
 
-            sceneRef.current.add(model);
-            selectableObjectsRef.current.push(model);
+				sceneRef.current.add(model);
+				selectableObjectsRef.current.push(model);
 
-            // Salvar no Supabase
-            if (onCreatePoint) {
-                onCreatePoint({ ...posicaoRelativa, nome: nomeDoPonto.trim() });
-            }
-        },
-        undefined,
-        (error) => {
-            console.error("Erro ao carregar modelo:", error);
-        }
-    );
-};
+				// Salvar no Supabase
+				if (onCreatePoint) {
+					onCreatePoint({ ...posicaoRelativa, nome: nomeDoPonto.trim() });
+				}
+			},
+			undefined,
+			(error) => {
+				console.error("Erro ao carregar modelo:", error);
+			}
+		);
+	};
 
-
-	// ✅ CORRIGIDO: Função de animação de rotação
-	const startFlipAnimation = (object3D, { axis = "z", degree = Math.PI, duration = 600 } = {}) => {
-		if (!object3D) return;
+	// ✅ Função de animação de rotação corrigida
+	const startFlipAnimation = (object3D, { axis = "y", degree = Math.PI * 2, duration = 800 } = {}) => {
+		if (!object3D || !object3D.rotation) {
+			console.log("❌ Objeto inválido para animação");
+			return;
+		}
 		
 		// ✅ Verificar se já está animando este objeto
 		const existingAnim = flipAnimationsRef.current.find(anim => anim.object === object3D);
@@ -278,7 +294,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 		const start = object3D.rotation[axis];
 		const target = start + degree;
 		
-		console.log(`🔄 Iniciando animação: ${axis} de ${start} para ${target}`);
+		console.log(`🔄 Iniciando animação: ${axis} de ${start.toFixed(2)} para ${target.toFixed(2)}`);
 		
 		flipAnimationsRef.current.push({
 			object: object3D,
@@ -317,9 +333,14 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 		}
 	};
 
-	// Função para buscar pontos no Supabase
+	// ✅ Função para buscar pontos no Supabase - CORRIGIDA
 	const carregarPontosSalvos = async () => {
-		if (!calibrado || !pontoReferencia) return;
+		if (!calibrado || !pontoReferencia) {
+			console.log("❌ Não calibrado ou sem ponto de referência");
+			return;
+		}
+
+		console.log(`🔍 Carregando pontos para QR: ${pontoReferencia.qrCode}, Filtro: ${filtroAtivo || 'todos'}`);
 
 		try {
 			// ✅ Aplicar filtro se selecionado
@@ -328,21 +349,26 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 				.select("*")
 				.eq("qr_referencia", pontoReferencia.qrCode);
 
-				if (filtroAtivo && filtroAtivo !== 'todos') {
+			if (filtroAtivo && filtroAtivo !== 'todos') {
 				query = query.eq("nome", filtroAtivo);
-				}
+			}
 
 			const { data, error } = await query;
 
 			if (error) {
-				console.error("Erro ao carregar pontos do Supabase:", error.message);
+				console.error("❌ Erro ao carregar pontos do Supabase:", error.message);
+				return;
+			}
+
+			if (!data || data.length === 0) {
+				console.log("📭 Nenhum ponto encontrado no banco");
 				return;
 			}
 
 			// ✅ Limpar pontos anteriores antes de carregar novos
 			limparObjetosAR();
 
-			console.log(`Carregando ${data.length} pontos ${filtroAtivo === 'todos' ? '' : 'filtrados '}do banco para modo ${mode}...`);
+			console.log(`📍 Carregando ${data.length} pontos ${filtroAtivo === 'todos' ? '' : 'filtrados '}do banco para modo ${mode}...`);
 
 			data.forEach((ponto, index) => {
 				const posicaoAbsoluta = new THREE.Vector3(
@@ -358,15 +384,17 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 				criarModeloCarregado(posicaoAbsoluta, ponto, index);
 			});
 		} catch (err) {
-			console.error("Erro inesperado ao buscar pontos:", err);
+			console.error("❌ Erro inesperado ao buscar pontos:", err);
 		}
 	};
 
 	const criarModeloCarregado = (posicao, dadosPonto, index) => {
+		console.log(`🎨 Criando modelo para: ${dadosPonto.nome || 'Sem nome'}`);
+		
 		loaderRef.current.load(
 			"/map_pointer_3d_icon.glb",
 			(gltf) => {
-				const model = gltf.scene;
+				const model = gltf.scene.clone(); // ✅ Clone para evitar conflitos
 				model.position.copy(posicao);
 				model.position.y += 1;
 				model.scale.set(0.1, 0.1, 0.1);
@@ -374,24 +402,31 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 				model.userData = {
 					carregado: true,
 					dadosOriginais: dadosPonto,
+					nome: dadosPonto.nome || 'Sem nome'
 				};
 
-				const cor = new THREE.Color().setHSL(Math.random(), 0.7, 0.5);
+				// ✅ Cores mais distintas
+				const hue = (index * 0.15) % 1;
+				const cor = new THREE.Color().setHSL(hue, 0.8, 0.6);
 
 				model.traverse((child) => {
 					if (child.isMesh) {
-						if (child.material) child.material = child.material.clone();
-						child.material.color = cor;
+						if (child.material) {
+							child.material = child.material.clone();
+							child.material.color = cor;
+						}
 					}
 				});
 
 				sceneRef.current.add(model);
 				// ✅ Adicionar ao array de selecionáveis
 				selectableObjectsRef.current.push(model);
+				
+				console.log(`✅ Modelo criado para: ${dadosPonto.nome} - Total objetos: ${selectableObjectsRef.current.length}`);
 			},
 			undefined,
 			(error) => {
-				console.error("Erro ao carregar modelo:", error);
+				console.error("❌ Erro ao carregar modelo:", error);
 				// Fallback para cubo
 				criarCuboCarregado(posicao, dadosPonto, index);
 			}
@@ -399,11 +434,11 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 	};
 
 	const criarCuboCarregado = (posicao, dadosPonto, index) => {
+		console.log(`📦 Criando cubo fallback para: ${dadosPonto.nome || 'Sem nome'}`);
+		
 		const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-		const hue = (index * 0.1) % 1;
-		const saturation = mode === "admin" ? 0.5 : 0.7;
-		const lightness = mode === "admin" ? 0.4 : 0.6;
-		const cor = new THREE.Color().setHSL(hue, saturation, lightness);
+		const hue = (index * 0.15) % 1;
+		const cor = new THREE.Color().setHSL(hue, 0.8, 0.6);
 
 		const material = new THREE.MeshLambertMaterial({ color: cor });
 		const cube = new THREE.Mesh(geometry, material);
@@ -413,10 +448,13 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 		cube.userData = {
 			carregado: true,
 			dadosOriginais: dadosPonto,
+			nome: dadosPonto.nome || 'Sem nome'
 		};
 
 		sceneRef.current.add(cube);
 		selectableObjectsRef.current.push(cube);
+		
+		console.log(`✅ Cubo criado para: ${dadosPonto.nome} - Total objetos: ${selectableObjectsRef.current.length}`);
 	};
 
 	const calcularPosicaoRelativa = (posicaoAR) => {
@@ -428,6 +466,8 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 
 	const limparObjetosAR = () => {
 		if (!sceneRef.current) return;
+
+		console.log("🧹 Limpando objetos AR...");
 
 		const objetosParaRemover = [];
 		sceneRef.current.traverse((child) => {
@@ -455,6 +495,8 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 		// limpar arrays auxiliares
 		selectableObjectsRef.current = [];
 		flipAnimationsRef.current = [];
+		
+		console.log(`✅ ${objetosParaRemover.length} objetos removidos`);
 	};
 
 	const onWindowResize = () => {
@@ -510,21 +552,24 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 			}
 		}
 
-		// ✅ CORRIGIDO: Atualizar animações de flip
+		// ✅ Atualizar animações de flip - CORRIGIDO
 		if (flipAnimationsRef.current.length > 0) {
 			const toRemove = [];
 			flipAnimationsRef.current.forEach((anim, idx) => {
+				if (!anim.object || !anim.object.rotation) {
+					toRemove.push(idx);
+					return;
+				}
+				
 				anim.elapsed += deltaMs;
 				const t = Math.min(anim.elapsed / anim.duration, 1);
 				const eased = easeOutQuad(t);
 				const newRot = anim.start + (anim.target - anim.start) * eased;
 				
-				if (anim.object && anim.object.rotation) {
-					anim.object.rotation[anim.axis] = newRot;
-				}
+				anim.object.rotation[anim.axis] = newRot;
 				
 				if (t >= 1) {
-					console.log(`✅ Animação concluída para objeto`);
+					console.log(`✅ Animação concluída para objeto: ${anim.object.userData.nome || 'Sem nome'}`);
 					toRemove.push(idx);
 				}
 			});
@@ -541,6 +586,8 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 	};
 
 	const cleanup = () => {
+		console.log("🧹 Fazendo cleanup do ARView");
+		
 		if (rendererRef.current) {
 			rendererRef.current.setAnimationLoop(null);
 
@@ -551,10 +598,11 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 
 		window.removeEventListener("resize", onWindowResize);
 
-		// ✅ Remover event listeners
-		if (rendererRef.current && rendererRef.current.domElement) {
-			rendererRef.current.domElement.removeEventListener('touchstart', onTouchStart, false);
-			rendererRef.current.domElement.removeEventListener('click', onTouchStart, false);
+		// ✅ Remover event listeners usando referência armazenada
+		if (rendererRef.current && rendererRef.current.domElement && rendererRef.current.domElement._touchHandler) {
+			rendererRef.current.domElement.removeEventListener('touchstart', rendererRef.current.domElement._touchHandler, { passive: false });
+			rendererRef.current.domElement.removeEventListener('click', rendererRef.current.domElement._touchHandler, { passive: false });
+			delete rendererRef.current.domElement._touchHandler;
 		}
 
 		limparObjetosAR();
@@ -564,7 +612,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 		}
 	};
 
-	// ✅ CORRIGIDO: Reset completo do modal
+	// ✅ Reset completo do modal
 	const handleCreateNamedPoint = () => {
 		if (!pointName.trim() || !pendingPoint) return;
 
@@ -607,11 +655,11 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 			}
 		);
 
-		// ✅ CORRIGIDO: Reset completo do modal
+		// ✅ Reset completo do modal
 		resetModal();
 	};
 
-	// ✅ NOVO: Função para resetar modal completamente
+	// ✅ Função para resetar modal completamente
 	const resetModal = () => {
 		setShowNameModal(false);
 		setPendingPoint(null);
