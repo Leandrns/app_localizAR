@@ -4,7 +4,7 @@ import { ARButton } from "three/examples/jsm/webxr/ARButton.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { supabase } from '../supabaseClient'
 
-function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtroMarcador }) {
+function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtroMarcador, marcadoresDisponiveis, setFiltroAtivo }) {
 	const containerRef = useRef(null);
 	const sceneRef = useRef(null);
 	const rendererRef = useRef(null);
@@ -363,7 +363,13 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 
 				model.userData = {
 					carregado: true,
-					dadosOriginais: dadosPonto,
+					dadosOriginais: {
+						id: dadosPonto.id,
+						nome: dadosPonto.nome,
+						pos_x: dadosPonto.pos_x,
+						pos_y: dadosPonto.pos_y,
+						pos_z: dadosPonto.pos_z
+					}
 				};
 
 				const cor = new THREE.Color().setHSL(Math.random(), 0.7, 0.5);
@@ -546,19 +552,45 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 		}
 	};
 
-	return (
-		<div
-			ref={containerRef}
-			style={{
-				position: "fixed",
-				top: 0,
-				left: 0,
-				width: "100%",
-				height: "100%",
-				zIndex: 1,
-			}}
-		/>
-	);
+return (
+  <div
+    ref={containerRef}
+    style={{
+      position: "fixed",
+      top: 0,
+      left: 0,
+      width: "100%",
+      height: "100%",
+      zIndex: 1,
+    }}
+  >
+    {mode === "user" && marcadoresDisponiveis?.length > 0 && (
+      <div className="filtro-overlay" style={{
+        position: "absolute",
+        top: "10px",
+        left: "10px",
+        zIndex: 10,
+        background: "rgba(0,0,0,0.5)",
+        padding: "8px",
+        borderRadius: "8px"
+      }}>
+        <button onClick={() => setFiltroAtivo(null)}>
+          Mostrar todos
+        </button>
+        {marcadoresDisponiveis.map((m) => (
+          <button
+            key={m.id}
+            className={filtroMarcador?.id === m.id ? "ativo" : ""}
+            onClick={() => setFiltroAtivo(m)}
+          >
+            {m.nome}
+          </button>
+        ))}
+      </div>
+    )}
+  </div>
+);
 }
+
 
 export default ARView;

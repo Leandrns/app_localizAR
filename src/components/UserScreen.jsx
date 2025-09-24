@@ -199,6 +199,8 @@ function UserScreen({
 					pontoReferencia={pontoReferencia}
 					pontos={pontos}
 					filtroMarcador={filtroAtivo}
+					marcadoresDisponiveis={marcadoresDisponiveis}
+    			setFiltroAtivo={setFiltroAtivo}
 				/>
 			)} 
 		</div>
