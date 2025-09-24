@@ -33,20 +33,11 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 
 
 	useEffect(() => {
-		if (!todosObjetosRef.current) return;
-
-		todosObjetosRef.current.forEach((obj) => {
-			if (filtroMarcador) {
-				const shouldShow = obj.userData?.dadosOriginais?.id === filtroMarcador.id;
-				obj.visible = shouldShow;
-				destacarObjeto(obj, shouldShow);
-			} else {
-				obj.visible = true;
-				destacarObjeto(obj, false);
-			}
-		});
-		aplicarFiltroVisualizacao();
+		if (todosObjetosRef.current.length > 0) {
+			aplicarFiltroVisualizacao();
+		}
 	}, [filtroMarcador]);
+
 
 
 	const aplicarFiltroVisualizacao = () => {
