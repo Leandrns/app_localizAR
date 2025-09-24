@@ -768,7 +768,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 							onMouseOut={(e) => {
 								e.target.style.transform = "scale(1)";
 								e.target.style.boxShadow = "none";
-							}}></button>
+							}}>Resgatar prêmio</button>
 						</div>
 					</div>
 				)
