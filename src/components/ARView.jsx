@@ -20,23 +20,24 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	const flipAnimationsRef = useRef([]); // animações ativas
 	const lastTimestampRef = useRef(0);
 	
-	// Estados para o sistema de prêmios
-	const [showPrizeModal, setShowPrizeModal] = useState(false);
-	const [currentPrize, setCurrentPrize] = useState(null);
+	// Refs para o sistema de prêmios 3D
 	const clickCounterRef = useRef(new Map()); // Map para contar cliques por objeto
+	const prizeDisplayRef = useRef(null); // Painel 3D do prêmio
+	const prizeAnimationRef = useRef(null); // Animação do painel
+	const fontLoaderRef = useRef(null);
 
 	// Lista de prêmios possíveis
 	const prizes = [
-		{ name: "Desconto de 10%", description: "10% de desconto na próxima compra", icon: "🎟️" },
-		{ name: "Brinde Especial", description: "Ganhe um brinde exclusivo do evento", icon: "🎁" },
-		{ name: "Entrada VIP", description: "Acesso VIP para a próxima área", icon: "⭐" },
-		{ name: "Drink Grátis", description: "Uma bebida cortesia no bar", icon: "🍹" },
-		{ name: "Foto Premium", description: "Sessão de fotos profissional gratuita", icon: "📸" },
-		{ name: "Sorteio Duplo", description: "Participe do sorteio com chance dupla", icon: "🍀" },
-		{ name: "Acesso Backstage", description: "Visite o backstage do evento", icon: "🎭" },
-		{ name: "Mesa Reservada", description: "Mesa reservada na área premium", icon: "🪑" },
-		{ name: "Kit Exclusivo", description: "Kit de produtos exclusivos", icon: "📦" },
-		{ name: "Experiência Plus", description: "Upgrade para experiência premium", icon: "✨" }
+		{ name: "Desconto de 10%", description: "10% de desconto na proxima compra", emoji: "🎟️" },
+		{ name: "Brinde Especial", description: "Ganhe um brinde exclusivo do evento", emoji: "🎁" },
+		{ name: "Entrada VIP", description: "Acesso VIP para a proxima area", emoji: "⭐" },
+		{ name: "Drink Gratis", description: "Uma bebida cortesia no bar", emoji: "🍹" },
+		{ name: "Foto Premium", description: "Sessao de fotos profissional gratuita", emoji: "📸" },
+		{ name: "Sorteio Duplo", description: "Participe do sorteio com chance dupla", emoji: "🍀" },
+		{ name: "Acesso Backstage", description: "Visite o backstage do evento", emoji: "🎭" },
+		{ name: "Mesa Reservada", description: "Mesa reservada na area premium", emoji: "🪑" },
+		{ name: "Kit Exclusivo", description: "Kit de produtos exclusivos", emoji: "📦" },
+		{ name: "Experiencia Plus", description: "Upgrade para experiencia premium", emoji: "✨" }
 	];
 
 	useEffect(() => {
@@ -153,14 +154,198 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		flipAnimationsRef.current = [];
 		lastTimestampRef.current = 0;
 		selectableObjectsRef.current = [];
-		// Limpar contador de cliques
+		// Limpar contador de cliques e painel de prêmio
 		clickCounterRef.current.clear();
+		if (prizeDisplayRef.current) {
+			sceneRef.current.remove(prizeDisplayRef.current);
+			prizeDisplayRef.current = null;
+		}
+		prizeAnimationRef.current = null;
 	};
 
 	// Função para gerar prêmio aleatório
 	const generateRandomPrize = () => {
 		const randomIndex = Math.floor(Math.random() * prizes.length);
 		return prizes[randomIndex];
+	};
+
+	// Criar painel 3D de prêmio
+	const create3DPrizePanel = (prize) => {
+		const group = new THREE.Group();
+
+		// Painel de fundo
+		const panelGeometry = new THREE.PlaneGeometry(2, 1.2);
+		const panelMaterial = new THREE.MeshBasicMaterial({
+			color: 0x1e1e1e,
+			transparent: true,
+			opacity: 0.9
+		});
+		const panel = new THREE.Mesh(panelGeometry, panelMaterial);
+		group.add(panel);
+
+		// Borda do painel
+		const borderGeometry = new THREE.RingGeometry(0.95, 1, 32);
+		const borderMaterial = new THREE.MeshBasicMaterial({
+			color: 0x4ecdc4,
+			transparent: true,
+			opacity: 0.8
+		});
+		const border = new THREE.Mesh(borderGeometry, borderMaterial);
+		border.position.z = 0.01;
+		group.add(border);
+
+		// Canvas para texto
+		const canvas = document.createElement('canvas');
+		const context = canvas.getContext('2d');
+		canvas.width = 512;
+		canvas.height = 256;
+
+		// Fundo do canvas
+		context.fillStyle = 'rgba(30, 30, 30, 0)';
+		context.fillRect(0, 0, canvas.width, canvas.height);
+
+		// Emoji de celebração
+		context.font = '48px Arial';
+		context.textAlign = 'center';
+		context.fillText('🎉', canvas.width/2, 50);
+
+		// Título "Parabéns!"
+		context.font = 'bold 32px Arial';
+		context.fillStyle = '#4ecdc4';
+		context.fillText('Parabéns!', canvas.width/2, 90);
+
+		// Emoji do prêmio
+		context.font = '40px Arial';
+		context.fillText(prize.emoji, canvas.width/2, 130);
+
+		// Nome do prêmio
+		context.font = 'bold 24px Arial';
+		context.fillStyle = '#ffffff';
+		context.fillText(prize.name, canvas.width/2, 160);
+
+		// Descrição do prêmio (quebrar texto se necessário)
+		context.font = '16px Arial';
+		context.fillStyle = '#a0a0a0';
+		
+		const words = prize.description.split(' ');
+		let line = '';
+		let lines = [];
+		
+		for (let n = 0; n < words.length; n++) {
+			const testLine = line + words[n] + ' ';
+			const metrics = context.measureText(testLine);
+			if (metrics.width > 400 && n > 0) {
+				lines.push(line);
+				line = words[n] + ' ';
+			} else {
+				line = testLine;
+			}
+		}
+		lines.push(line);
+
+		for (let i = 0; i < lines.length; i++) {
+			context.fillText(lines[i], canvas.width/2, 190 + (i * 20));
+		}
+
+		// Instrução
+		context.font = '12px Arial';
+		context.fillStyle = '#666666';
+		context.fillText('Mostre esta tela no balcão', canvas.width/2, 240);
+
+		// Criar textura do canvas
+		const texture = new THREE.CanvasTexture(canvas);
+		texture.needsUpdate = true;
+
+		// Material do texto
+		const textMaterial = new THREE.MeshBasicMaterial({
+			map: texture,
+			transparent: true,
+			alphaTest: 0.1
+		});
+
+		// Mesh do texto
+		const textGeometry = new THREE.PlaneGeometry(2, 1);
+		const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+		textMesh.position.z = 0.02;
+		group.add(textMesh);
+
+		// Posicionar o painel na frente da câmera
+		const camera = cameraRef.current;
+		if (camera) {
+			group.position.copy(camera.position);
+			group.position.add(camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(-1.5));
+			group.position.y += 0.5;
+			group.lookAt(camera.position);
+		}
+
+		// Iniciar invisível para animação
+		group.scale.set(0, 0, 0);
+
+		return group;
+	};
+
+	// Animar aparição do painel
+	const animatePrizePanel = (panel) => {
+		const startTime = Date.now();
+		const duration = 800;
+
+		const animate = () => {
+			const elapsed = Date.now() - startTime;
+			const progress = Math.min(elapsed / duration, 1);
+			
+			// Easing out bounce
+			const easeOutBounce = (t) => {
+				if (t < (1 / 2.75)) {
+					return 7.5625 * t * t;
+				} else if (t < (2 / 2.75)) {
+					return 7.5625 * (t -= (1.5 / 2.75)) * t + 0.75;
+				} else if (t < (2.5 / 2.75)) {
+					return 7.5625 * (t -= (2.25 / 2.75)) * t + 0.9375;
+				} else {
+					return 7.5625 * (t -= (2.625 / 2.75)) * t + 0.984375;
+				}
+			};
+
+			const scale = easeOutBounce(progress);
+			panel.scale.set(scale, scale, scale);
+
+			if (progress < 1) {
+				requestAnimationFrame(animate);
+			}
+		};
+
+		animate();
+	};
+
+	// Remover painel após delay
+	const removePrizePanel = () => {
+		if (prizeDisplayRef.current && sceneRef.current) {
+			// Animação de saída
+			const startTime = Date.now();
+			const duration = 500;
+			const initialScale = 1;
+
+			const animate = () => {
+				const elapsed = Date.now() - startTime;
+				const progress = Math.min(elapsed / duration, 1);
+				
+				const scale = initialScale * (1 - progress);
+				if (prizeDisplayRef.current) {
+					prizeDisplayRef.current.scale.set(scale, scale, scale);
+				}
+
+				if (progress >= 1) {
+					if (prizeDisplayRef.current) {
+						sceneRef.current.remove(prizeDisplayRef.current);
+						prizeDisplayRef.current = null;
+					}
+				} else {
+					requestAnimationFrame(animate);
+				}
+			};
+
+			animate();
+		}
 	};
 
 	// Handler único para select — cria ponto no admin, dispara flip no visitante
@@ -259,11 +444,23 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 					
 					// Gerar prêmio aleatório
 					const prize = generateRandomPrize();
-					setCurrentPrize(prize);
 					
-					// Mostrar modal após um pequeno delay para a animação terminar
+					// Remover painel anterior se existir
+					if (prizeDisplayRef.current) {
+						sceneRef.current.remove(prizeDisplayRef.current);
+					}
+					
+					// Criar e mostrar painel 3D após delay da animação
 					setTimeout(() => {
-						setShowPrizeModal(true);
+						const panel = create3DPrizePanel(prize);
+						prizeDisplayRef.current = panel;
+						sceneRef.current.add(panel);
+						animatePrizePanel(panel);
+
+						// Auto-remover após 5 segundos
+						setTimeout(() => {
+							removePrizePanel();
+						}, 5000);
 					}, 700);
 				}
 			}
@@ -518,6 +715,21 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 			}
 		}
 
+		// Atualizar posição do painel de prêmio para sempre ficar na frente da câmera
+		if (prizeDisplayRef.current && camera) {
+			const panel = prizeDisplayRef.current;
+			// Manter distância fixa da câmera
+			const cameraDirection = new THREE.Vector3();
+			camera.getWorldDirection(cameraDirection);
+			
+			const newPosition = camera.position.clone();
+			newPosition.add(cameraDirection.multiplyScalar(-1.5));
+			newPosition.y += 0.3;
+			
+			panel.position.copy(newPosition);
+			panel.lookAt(camera.position);
+		}
+
 		if (renderer && scene && camera) {
 			renderer.render(scene, camera);
 		}
@@ -541,128 +753,18 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		}
 	};
 
-	// Fechar modal de prêmio
-	const closePrizeModal = () => {
-		setShowPrizeModal(false);
-		setCurrentPrize(null);
-	};
-
 	return (
-		<>
-			<div
-				ref={containerRef}
-				style={{
-					position: "fixed",
-					top: 0,
-					left: 0,
-					width: "100%",
-					height: "100%",
-					zIndex: 1,
-				}}
-			/>
-
-			{/* Modal de Prêmio */}
-			{showPrizeModal && currentPrize && (
-				<div 
-					style={{
-						position: "fixed",
-						top: 0,
-						left: 0,
-						width: "100%",
-						height: "100%",
-						backgroundColor: "rgba(0, 0, 0, 0.8)",
-						display: "flex",
-						justifyContent: "center",
-						alignItems: "center",
-						zIndex: 1000,
-						padding: "20px"
-					}}
-				>
-					<div 
-						style={{
-							backgroundColor: "#1e1e1e",
-							border: "2px solid #4ecdc4",
-							borderRadius: "16px",
-							padding: "30px",
-							textAlign: "center",
-							maxWidth: "400px",
-							width: "100%",
-							color: "#fff",
-							boxShadow: "0 8px 32px rgba(0, 0, 0, 0.5)"
-						}}
-					>
-						<div style={{ fontSize: "60px", marginBottom: "15px" }}>
-							🎉
-						</div>
-						
-						<h2 style={{ 
-							color: "#4ecdc4", 
-							marginBottom: "10px",
-							fontSize: "24px"
-						}}>
-							Parabéns!
-						</h2>
-						
-						<div style={{ 
-							fontSize: "40px", 
-							marginBottom: "15px" 
-						}}>
-							{currentPrize.icon}
-						</div>
-						
-						<h3 style={{ 
-							color: "#fff", 
-							marginBottom: "10px",
-							fontSize: "20px"
-						}}>
-							{currentPrize.name}
-						</h3>
-						
-						<p style={{ 
-							color: "#a0a0a0", 
-							marginBottom: "25px",
-							lineHeight: "1.4"
-						}}>
-							{currentPrize.description}
-						</p>
-						
-						<button
-							onClick={closePrizeModal}
-							style={{
-								backgroundColor: "#4ecdc4",
-								color: "#1e1e1e",
-								border: "none",
-								padding: "12px 30px",
-								borderRadius: "8px",
-								fontSize: "16px",
-								fontWeight: "bold",
-								cursor: "pointer",
-								transition: "all 0.2s ease"
-							}}
-							onMouseOver={(e) => {
-								e.target.style.backgroundColor = "#45b7aa";
-								e.target.style.transform = "scale(1.05)";
-							}}
-							onMouseOut={(e) => {
-								e.target.style.backgroundColor = "#4ecdc4";
-								e.target.style.transform = "scale(1)";
-							}}
-						>
-							Resgatar Prêmio
-						</button>
-						
-						<p style={{ 
-							fontSize: "12px", 
-							color: "#666", 
-							marginTop: "15px",
-							marginBottom: "0"
-						}}>
-							Mostre esta tela no balcão de atendimento
-						</p>
-					</div>
-				</div>
-			)}
-		</>
+		<div
+			ref={containerRef}
+			style={{
+				position: "fixed",
+				top: 0,
+				left: 0,
+				width: "100%",
+				height: "100%",
+				zIndex: 1,
+			}}
+		/>
 	);
 }
 
