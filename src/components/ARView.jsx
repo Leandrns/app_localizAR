@@ -153,10 +153,8 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		flipAnimationsRef.current = [];
 		lastTimestampRef.current = 0;
 		selectableObjectsRef.current = [];
-		// Limpar contador de cliques e fechar modal
+		// Limpar contador de cliques
 		clickCounterRef.current.clear();
-		setShowPrizeModal(false);
-		setCurrentPrize(null);
 	};
 
 	// Função para gerar prêmio aleatório
@@ -266,12 +264,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 					// Mostrar modal após um pequeno delay para a animação terminar
 					setTimeout(() => {
 						setShowPrizeModal(true);
-						
-						// Auto-fechar após 5 segundos
-						setTimeout(() => {
-							setShowPrizeModal(false);
-							setCurrentPrize(null);
-						}, 5000);
 					}, 700);
 				}
 			}
@@ -569,184 +561,107 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 				}}
 			/>
 
-			{/* Modal de Prêmio - WebXR Compatible */}
+			{/* Modal de Prêmio */}
 			{showPrizeModal && currentPrize && (
 				<div 
-					className="webxr-overlay"
 					style={{
 						position: "fixed",
-						top: "0",
-						left: "0",
-						right: "0",
-						bottom: "0",
-						width: "100vw",
-						height: "100vh",
-						backgroundColor: "rgba(0, 0, 0, 0.85)",
+						top: 0,
+						left: 0,
+						width: "100%",
+						height: "100%",
+						backgroundColor: "rgba(0, 0, 0, 0.8)",
 						display: "flex",
 						justifyContent: "center",
 						alignItems: "center",
-						zIndex: 999999,
-						padding: "20px",
-						fontFamily: "'Lexend', sans-serif",
-						boxSizing: "border-box",
-						backdropFilter: "blur(5px)",
-						WebkitBackdropFilter: "blur(5px)",
+						zIndex: 1000,
+						padding: "20px"
 					}}
-					onClick={closePrizeModal}
 				>
 					<div 
 						style={{
 							backgroundColor: "#1e1e1e",
-							border: "3px solid #4ecdc4",
-							borderRadius: "20px",
-							padding: "40px 30px",
+							border: "2px solid #4ecdc4",
+							borderRadius: "16px",
+							padding: "30px",
 							textAlign: "center",
-							maxWidth: "90vw",
+							maxWidth: "400px",
 							width: "100%",
-							maxHeight: "90vh",
 							color: "#fff",
-							boxShadow: "0 20px 60px rgba(0, 0, 0, 0.8)",
-							animation: "prizeModalAppear 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
-							position: "relative",
-							overflow: "hidden"
+							boxShadow: "0 8px 32px rgba(0, 0, 0, 0.5)"
 						}}
-						onClick={(e) => e.stopPropagation()}
 					>
-						{/* Efeito de brilho de fundo */}
-						<div style={{
-							position: "absolute",
-							top: "-50%",
-							left: "-50%",
-							width: "200%",
-							height: "200%",
-							background: "radial-gradient(circle, rgba(78, 205, 196, 0.1) 0%, transparent 70%)",
-							pointerEvents: "none",
-							animation: "prizeGlow 3s infinite alternate"
-						}} />
-
-						{/* Confetes animados */}
-						<div style={{ position: "relative", zIndex: 1 }}>
-							<div style={{ 
-								fontSize: "60px", 
-								marginBottom: "15px",
-								animation: "bounce 1s infinite alternate",
-								filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.3))"
-							}}>
-								🎉
-							</div>
-							
-							<h2 style={{ 
-								color: "#4ecdc4", 
-								marginBottom: "10px",
-								fontSize: "28px",
-								fontWeight: "bold",
-								textShadow: "0 2px 4px rgba(0,0,0,0.5)"
-							}}>
-								Parabéns!
-							</h2>
-							
-							<div style={{ 
-								fontSize: "50px", 
-								marginBottom: "20px",
-								animation: "pulse 2s infinite",
-								filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.3))"
-							}}>
-								{currentPrize.icon}
-							</div>
-							
-							<h3 style={{ 
-								color: "#fff", 
-								marginBottom: "15px",
-								fontSize: "24px",
-								fontWeight: "bold"
-							}}>
-								{currentPrize.name}
-							</h3>
-							
-							<p style={{ 
-								color: "#a0a0a0", 
-								marginBottom: "30px",
-								lineHeight: "1.6",
-								fontSize: "16px"
-							}}>
-								{currentPrize.description}
-							</p>
-							
-							<button
-								onClick={closePrizeModal}
-								style={{
-									background: "linear-gradient(135deg, #4ecdc4 0%, #45b7aa 100%)",
-									color: "#1e1e1e",
-									border: "none",
-									padding: "15px 40px",
-									borderRadius: "12px",
-									fontSize: "18px",
-									fontWeight: "bold",
-									cursor: "pointer",
-									transition: "all 0.3s ease",
-									boxShadow: "0 4px 15px rgba(78, 205, 196, 0.3)",
-									textTransform: "uppercase",
-									letterSpacing: "1px"
-								}}
-							>
-								🎁 Resgatar Prêmio
-							</button>
-							
-							<p style={{ 
-								fontSize: "14px", 
-								color: "#666", 
-								marginTop: "20px",
-								marginBottom: "0"
-							}}>
-								📱 Mostre esta tela no balcão de atendimento
-							</p>
+						<div style={{ fontSize: "60px", marginBottom: "15px" }}>
+							🎉
 						</div>
+						
+						<h2 style={{ 
+							color: "#4ecdc4", 
+							marginBottom: "10px",
+							fontSize: "24px"
+						}}>
+							Parabéns!
+						</h2>
+						
+						<div style={{ 
+							fontSize: "40px", 
+							marginBottom: "15px" 
+						}}>
+							{currentPrize.icon}
+						</div>
+						
+						<h3 style={{ 
+							color: "#fff", 
+							marginBottom: "10px",
+							fontSize: "20px"
+						}}>
+							{currentPrize.name}
+						</h3>
+						
+						<p style={{ 
+							color: "#a0a0a0", 
+							marginBottom: "25px",
+							lineHeight: "1.4"
+						}}>
+							{currentPrize.description}
+						</p>
+						
+						<button
+							onClick={closePrizeModal}
+							style={{
+								backgroundColor: "#4ecdc4",
+								color: "#1e1e1e",
+								border: "none",
+								padding: "12px 30px",
+								borderRadius: "8px",
+								fontSize: "16px",
+								fontWeight: "bold",
+								cursor: "pointer",
+								transition: "all 0.2s ease"
+							}}
+							onMouseOver={(e) => {
+								e.target.style.backgroundColor = "#45b7aa";
+								e.target.style.transform = "scale(1.05)";
+							}}
+							onMouseOut={(e) => {
+								e.target.style.backgroundColor = "#4ecdc4";
+								e.target.style.transform = "scale(1)";
+							}}
+						>
+							Resgatar Prêmio
+						</button>
+						
+						<p style={{ 
+							fontSize: "12px", 
+							color: "#666", 
+							marginTop: "15px",
+							marginBottom: "0"
+						}}>
+							Mostre esta tela no balcão de atendimento
+						</p>
 					</div>
 				</div>
 			)}
-
-			{/* Estilos CSS inline para animações */}
-			<style>{`
-				@keyframes prizeModalAppear {
-					0% {
-						opacity: 0;
-						transform: scale(0.3) rotate(-10deg);
-					}
-					50% {
-						opacity: 1;
-						transform: scale(1.05) rotate(2deg);
-					}
-					100% {
-						opacity: 1;
-						transform: scale(1) rotate(0deg);
-					}
-				}
-
-				@keyframes bounce {
-					0% { transform: translateY(0px); }
-					100% { transform: translateY(-10px); }
-				}
-
-				@keyframes pulse {
-					0% { transform: scale(1); }
-					50% { transform: scale(1.1); }
-					100% { transform: scale(1); }
-				}
-
-				@keyframes prizeGlow {
-					0% { opacity: 0.1; }
-					100% { opacity: 0.3; }
-				}
-
-				.webxr-overlay {
-					-webkit-user-select: none;
-					-moz-user-select: none;
-					-ms-user-select: none;
-					user-select: none;
-					-webkit-touch-callout: none;
-					-webkit-tap-highlight-color: transparent;
-				}
-			`}</style>
 		</>
 	);
 }
