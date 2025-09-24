@@ -42,15 +42,15 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 
 		todosObjetosRef.current.forEach((obj) => {
 			if (filtroMarcador) {
-				const shouldShow = obj.userData?.dadosOriginais?.id === filtroMarcador.id;
-				obj.visible = shouldShow;
-				destacarObjeto(obj, shouldShow);
+			const shouldShow = obj.userData?.dadosOriginais?.id === filtroMarcador.id;
+			obj.visible = shouldShow;
+			destacarObjeto(obj, shouldShow);
 			} else {
-				obj.visible = true;
-				destacarObjeto(obj, false);
+			obj.visible = true;
+			destacarObjeto(obj, false);
 			}
 		});
-	}, [filtroMarcador]);
+		}, [filtroMarcador]);
 
 
 	const aplicarFiltroVisualizacao = () => {
@@ -436,7 +436,6 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 		sceneRef.current.add(cube);
 		selectableObjectsRef.current.push(cube);
 
-		todosObjetosRef.current.push(cube);
 		if (!todosObjetosRef.current.includes(cube)) {
         	todosObjetosRef.current.push(cube);
 		}
