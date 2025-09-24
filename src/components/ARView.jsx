@@ -43,11 +43,8 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 				// Se há filtro ativo, mostra apenas o objeto correspondente
 				const shouldShow = obj.userData?.dadosOriginais?.id === filtroMarcador.id;
 				obj.visible = shouldShow;
+				destacarObjeto(obj, shouldShow);
 				
-				// Destaca o objeto filtrado com uma cor especial
-				if (shouldShow) {
-					destacarObjeto(obj, true);
-				}
 			} else {
 				// Se não há filtro, mostra todos os objetos
 				obj.visible = true;
@@ -387,10 +384,11 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 				sceneRef.current.add(model);
 				// adiciona ao array de selecionáveis
 				selectableObjectsRef.current.push(model);
-				todosObjetosRef.current.push(model);
-				if (mode === "user" && filtroMarcador) {
-					aplicarFiltroVisualizacao();
+				if (!todosObjetosRef.current.includes(model)) {
+					todosObjetosRef.current.push(model);
 				}
+				// Sempre aplicar filtro após adicionar
+				aplicarFiltroVisualizacao();
 			},
 			undefined,
 			(error) => {
@@ -423,9 +421,10 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 		selectableObjectsRef.current.push(cube);
 
 		todosObjetosRef.current.push(cube);
-		if (mode === "user" && filtroMarcador) {
-			aplicarFiltroVisualizacao();
+		if (!todosObjetosRef.current.includes(cube)) {
+        	todosObjetosRef.current.push(cube);
 		}
+		aplicarFiltroVisualizacao();
 	};
 
 	const calcularPosicaoRelativa = (posicaoAR) => {
