@@ -54,6 +54,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 				destacarObjeto(obj, false);
 			}
 		});
+
 	};
 
 	// NOVA FUNÇÃO: Destaca/remove destaque de um objeto
@@ -161,9 +162,10 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 					pontoReferencia.arPosition = new THREE.Vector3(0, 0, 0);
 				}
 
-				// Carregar pontos salvos
+				// Limpar objetos antigos antes de carregar
 				setTimeout(() => {
-					carregarPontosSalvos();
+				limparObjetosAR();
+				carregarPontosSalvos();
 				}, 1000);
 			}
 		});
@@ -385,6 +387,10 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 				sceneRef.current.add(model);
 				// adiciona ao array de selecionáveis
 				selectableObjectsRef.current.push(model);
+				todosObjetosRef.current.push(model);
+				if (mode === "user" && filtroMarcador) {
+					aplicarFiltroVisualizacao();
+				}
 			},
 			undefined,
 			(error) => {
@@ -393,6 +399,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 				criarCuboCarregado(posicao, dadosPonto, index);
 			}
 		);
+
 	};
 
 	const criarCuboCarregado = (posicao, dadosPonto, index) => {
@@ -414,6 +421,11 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 
 		sceneRef.current.add(cube);
 		selectableObjectsRef.current.push(cube);
+
+		todosObjetosRef.current.push(cube);
+		if (mode === "user" && filtroMarcador) {
+			aplicarFiltroVisualizacao();
+		}
 	};
 
 	const calcularPosicaoRelativa = (posicaoAR) => {
