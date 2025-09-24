@@ -50,6 +50,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 
 
 	const aplicarFiltroVisualizacao = () => {
+		selectableObjectsRef.current = [];
 		todosObjetosRef.current.forEach((obj) => {
 			if (filtroMarcador) {
 				// Se há filtro ativo, mostra apenas o objeto correspondente
@@ -57,10 +58,18 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint, filtr
 				obj.visible = shouldShow;
 				destacarObjeto(obj, shouldShow);
 
-			} else {
+			}
+
+			// adicionar ao raycast apenas se estiver visível
+			if (shouldShow) {
+				selectableObjectsRef.current.push(obj);
+			}
+
+			else {
 				// Se não há filtro, mostra todos os objetos
 				obj.visible = true;
 				destacarObjeto(obj, false);
+				selectableObjectsRef.current.push(obj);
 			}
 		});
 
