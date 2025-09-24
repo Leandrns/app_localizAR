@@ -31,40 +31,28 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		comum: {
 			probability: 0.60,
 			prizes: [
-				{ name: "Desconto de 5%", description: "5% de desconto na próxima compra", icon: "🎟️", rarity: "Comum" },
-				{ name: "Brinde Simples", description: "Ganhe um brinde básico do evento", icon: "🎁", rarity: "Comum" },
-				{ name: "Drink com Desconto", description: "20% de desconto em bebidas", icon: "🥤", rarity: "Comum" },
-				{ name: "Mapa do Evento", description: "Mapa físico premium do evento", icon: "🗺️", rarity: "Comum" },
+				{ name: "Chansey", description: "Chaveiro com modelo 3D da Chansey", urlImg: "https://img.pokemondb.net/sprites/ruby-sapphire/normal/chansey.png", rarity: "Comum" },
 			]
 		},
 		// Prêmios Raros (25% de chance total)
 		raro: {
 			probability: 0.25,
 			prizes: [
-				{ name: "Desconto de 15%", description: "15% de desconto na próxima compra", icon: "🎫", rarity: "Raro" },
-				{ name: "Brinde Especial", description: "Ganhe um brinde exclusivo do evento", icon: "🎁", rarity: "Raro" },
-				{ name: "Drink Grátis", description: "Uma bebida cortesia no bar", icon: "🍹", rarity: "Raro" },
-				{ name: "Foto Premium", description: "Sessão de fotos profissional gratuita", icon: "📸", rarity: "Raro" },
-				{ name: "Mesa Reservada", description: "Mesa reservada na área premium", icon: "🪑", rarity: "Raro" },
+				{ name: "Chansey", description: "Chaveiro com modelo 3D da Chansey", urlImg: "https://img.pokemondb.net/sprites/ruby-sapphire/normal/chansey.png", rarity: "Comum" },
 			]
 		},
 		// Prêmios Épicos (12% de chance total)
 		epico: {
 			probability: 0.12,
 			prizes: [
-				{ name: "Desconto de 25%", description: "25% de desconto na próxima compra", icon: "💳", rarity: "Épico" },
-				{ name: "Entrada VIP", description: "Acesso VIP para a próxima área", icon: "⭐", rarity: "Épico" },
-				{ name: "Kit Exclusivo", description: "Kit de produtos exclusivos", icon: "📦", rarity: "Épico" },
-				{ name: "Experiência Plus", description: "Upgrade para experiência premium", icon: "✨", rarity: "Épico" },
+				{ name: "Chansey", description: "Chaveiro com modelo 3D da Chansey", urlImg: "https://img.pokemondb.net/sprites/ruby-sapphire/normal/chansey.png", rarity: "Comum" },
 			]
 		},
 		// Prêmios Lendários (3% de chance total)
 		lendario: {
 			probability: 0.03,
 			prizes: [
-				{ name: "Desconto de 50%", description: "50% de desconto na próxima compra", icon: "💎", rarity: "Lendário" },
-				{ name: "Acesso Backstage", description: "Visite o backstage do evento", icon: "🎭", rarity: "Lendário" },
-				{ name: "Experiência VIP Completa", description: "Acesso total VIP + brindes exclusivos", icon: "👑", rarity: "Lendário" },
+				{ name: "Chansey", description: "Chaveiro com modelo 3D da Chansey", urlImg: "https://img.pokemondb.net/sprites/ruby-sapphire/normal/chansey.png", rarity: "Comum" },
 			]
 		}
 	};
@@ -745,7 +733,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 							zIndex: 1,
 							position: "relative"
 						}}>
-							{currentPrize.icon}
+							<img src={currentPrize.urlImg} alt="" />
 						</div>
 						
 						<h3 style={{ 
