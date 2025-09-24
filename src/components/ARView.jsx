@@ -38,21 +38,24 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		raro: {
 			probability: 0.25,
 			prizes: [
-				{ name: "Chansey", description: "Chaveiro com modelo 3D da Chansey", urlImg: "https://img.pokemondb.net/sprites/ruby-sapphire/normal/chansey.png", rarity: "Comum" },
+				{ name: "Venusaur", description: "Chaveiro com modelo 3D do Venusaur", urlImg: "https://img.pokemondb.net/sprites/x-y/normal/venusaur-f.png", rarity: "Raro" },
 			]
 		},
 		// Prêmios Épicos (12% de chance total)
 		epico: {
 			probability: 0.12,
 			prizes: [
-				{ name: "Chansey", description: "Chaveiro com modelo 3D da Chansey", urlImg: "https://img.pokemondb.net/sprites/ruby-sapphire/normal/chansey.png", rarity: "Comum" },
+				{ name: "Gengar", description: "Chaveiro com modelo 3D do Gengar", urlImg: "https://img.pokemondb.net/sprites/black-white/normal/gengar.png", rarity: "Épico" },
+				{ name: "Lucario", description: "Chaveiro com modelo 3D do Lucario", urlImg: "https://img.pokemondb.net/sprites/x-y/normal/lucario.png", rarity: "Épico" },
+				{ name: "Lapras", description: "Chaveiro com modelo 3D da Lapras", urlImg: "https://img.pokemondb.net/sprites/black-white/normal/lapras.png", rarity: "Épico" },
+				{ name: "Typhlosion", description: "Chaveiro com modelo 3D do Typhlosion", urlImg: "https://img.pokemondb.net/sprites/black-white/normal/typhlosion.png", rarity: "Épico" }
 			]
 		},
 		// Prêmios Lendários (3% de chance total)
 		lendario: {
 			probability: 0.03,
 			prizes: [
-				{ name: "Chansey", description: "Chaveiro com modelo 3D da Chansey", urlImg: "https://img.pokemondb.net/sprites/ruby-sapphire/normal/chansey.png", rarity: "Comum" },
+				{ name: "Arceus", description: "Chaveiro com modelo 3D do Arceus", urlImg: "https://img.pokemondb.net/sprites/x-y/normal/arceus-normal.png", rarity: "Lendário" },
 			]
 		}
 	};
