@@ -31,31 +31,31 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		comum: {
 			probability: 0.60,
 			prizes: [
-				{ name: "Chansey", description: "Chaveiro com modelo 3D da Chansey", urlImg: "https://img.pokemondb.net/sprites/ruby-sapphire/normal/chansey.png", rarity: "Comum" },
+				{ name: "Chansey", description: "Chaveiro com modelo 3D da Chansey", urlImg: "https://projectpokemon.org/images/normal-sprite/chansey.gif", rarity: "Comum" },
 			]
 		},
 		// Prêmios Raros (25% de chance total)
 		raro: {
 			probability: 0.25,
 			prizes: [
-				{ name: "Venusaur", description: "Chaveiro com modelo 3D do Venusaur", urlImg: "https://img.pokemondb.net/sprites/x-y/normal/venusaur-f.png", rarity: "Raro" },
+				{ name: "Venusaur", description: "Chaveiro com modelo 3D do Venusaur", urlImg: "https://projectpokemon.org/images/normal-sprite/venusaur.gif", rarity: "Raro" },
 			]
 		},
 		// Prêmios Épicos (12% de chance total)
 		epico: {
 			probability: 0.12,
 			prizes: [
-				{ name: "Gengar", description: "Chaveiro com modelo 3D do Gengar", urlImg: "https://img.pokemondb.net/sprites/black-white/normal/gengar.png", rarity: "Épico" },
-				{ name: "Lucario", description: "Chaveiro com modelo 3D do Lucario", urlImg: "https://img.pokemondb.net/sprites/x-y/normal/lucario.png", rarity: "Épico" },
-				{ name: "Lapras", description: "Chaveiro com modelo 3D da Lapras", urlImg: "https://img.pokemondb.net/sprites/black-white/normal/lapras.png", rarity: "Épico" },
-				{ name: "Typhlosion", description: "Chaveiro com modelo 3D do Typhlosion", urlImg: "https://img.pokemondb.net/sprites/black-white/normal/typhlosion.png", rarity: "Épico" }
+				{ name: "Gengar", description: "Chaveiro com modelo 3D do Gengar", urlImg: "https://projectpokemon.org/images/normal-sprite/gengar.gif", rarity: "Épico" },
+				{ name: "Lucario", description: "Chaveiro com modelo 3D do Lucario", urlImg: "https://projectpokemon.org/images/normal-sprite/lucario.gif", rarity: "Épico" },
+				{ name: "Lapras", description: "Chaveiro com modelo 3D da Lapras", urlImg: "https://projectpokemon.org/images/normal-sprite/lapras.gif", rarity: "Épico" },
+				{ name: "Typhlosion", description: "Chaveiro com modelo 3D do Typhlosion", urlImg: "https://projectpokemon.org/images/normal-sprite/typhlosion.gif", rarity: "Épico" }
 			]
 		},
 		// Prêmios Lendários (3% de chance total)
 		lendario: {
 			probability: 0.03,
 			prizes: [
-				{ name: "Arceus", description: "Chaveiro com modelo 3D do Arceus", urlImg: "https://img.pokemondb.net/sprites/x-y/normal/arceus-normal.png", rarity: "Lendário" },
+				{ name: "Arceus", description: "Chaveiro com modelo 3D do Arceus", urlImg: "https://projectpokemon.org/images/normal-sprite/arceus.gif", rarity: "Lendário" },
 			]
 		}
 	};
