@@ -756,7 +756,8 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 							zIndex: 1,
 							position: "relative"
 						}}>
-							{currentPrize.description}
+							{currentPrize.description}<br/>
+							Tire um print dessa tela!
 						</p>
 
 						{/* Informações de probabilidade */}
