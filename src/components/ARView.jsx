@@ -731,7 +731,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 						</h2>
 						
 						<div style={{ 
-							fontSize: "50px", 
+							fontSize: "30px", 
 							marginBottom: "5px",
 							zIndex: 1,
 							position: "relative"
