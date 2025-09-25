@@ -736,7 +736,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 							zIndex: 1,
 							position: "relative"
 						}}>
-							<img src={currentPrize.urlImg} alt="" />
+							<img src={currentPrize.urlImg} alt="" style={{width: "100px"}}/>
 						</div>
 						
 						<h3 style={{ 
