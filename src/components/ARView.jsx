@@ -29,7 +29,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 	const prizeSystem = {
 		// Prêmios Comuns (60% de chance total)
 		comum: {
-			probability: 0.60,
+			probability: 0.12,
 			prizes: [
 				{ name: "Chansey", description: "Chaveiro com modelo 3D da Chansey", urlImg: "https://projectpokemon.org/images/normal-sprite/chansey.gif", rarity: "Comum" },
 			]
@@ -43,7 +43,7 @@ function ARView({ mode, calibrado, pontoReferencia, pontos, onCreatePoint }) {
 		},
 		// Prêmios Épicos (12% de chance total)
 		epico: {
-			probability: 0.12,
+			probability: 0.60,
 			prizes: [
 				{ name: "Gengar", description: "Chaveiro com modelo 3D do Gengar", urlImg: "https://projectpokemon.org/images/normal-sprite/gengar.gif", rarity: "Épico" },
 				{ name: "Lucario", description: "Chaveiro com modelo 3D do Lucario", urlImg: "https://projectpokemon.org/images/normal-sprite/lucario.gif", rarity: "Épico" },
