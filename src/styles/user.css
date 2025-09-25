@@ -123,6 +123,7 @@ html, body, #root {
 
 .btn-recalibrar {
     border: solid 2px  #4ecdc4;
+    background-color: #505552;
     color: white;
 }
 
